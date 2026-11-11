@@ -19,11 +19,11 @@ Description: Orphanage repository by shionn
 SignWith: yes
 " > www/conf/distributions
 
-mkdir -p build/experimental
-mkdir -p build/trixie
+mkdir -p temp/experimental
+mkdir -p temp/trixie
 
-mv build/*~*.deb build/experimental/
-mv build/*.deb   build/trixie/
+mv temp/*~*.deb build/experimental/
+mv temp/*.deb   build/trixie/
 
 reprepro -b www/ includedeb trixie       build/trixie/*.deb
 reprepro -b www/ includedeb experimental build/experimental/*.deb

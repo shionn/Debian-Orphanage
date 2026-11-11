@@ -31,4 +31,4 @@ cd ..
 
 dpkg -b ${project}-keyring-${version}
 
-mv ${project}-keyring-${version}.deb ../
+mv ${project}-keyring-${version}.deb ../temp
