@@ -2,10 +2,12 @@
 
 # download_github : telecharge les assets d'une release d'un repo GitHub.
 #
-#   download_github <author> <repo> [pattern]
+#   download_github <author> <repo> [pattern] [release|pre-release]
 #
-#   pattern : regex ERE sur le nom de fichier. Seuls les fichiers qui
+#   pattern    : regex ERE sur le nom de fichier. Seuls les fichiers qui
 #            correspondent sont telecharges (le reste est ignore).
+#   release    : ne garde que la release stable (defaut).
+#   pre-release: inclut les prereleases (via ?pre=1 sur l'API GitHub).
 #
 # Récupère la release la plus recente, filtre par regex, puis telecharge
 # dans le dossier courant.
@@ -13,18 +15,23 @@
 download_github() {
 	local author="$1"
 	local repo="$2"
-	local pattern="${3:-}"
-	if [ -z "$pattern" ]; then
-		pattern=".*\.deb"
+	local pattern="${3:-'.*\.deb'}"
+	local prerelease="${4:-release}"
+	
+	API_URL="https://api.github.com/repos/${author}/${repo}/releases/latest"
+	if [ "$prerelease" = "pre-release" ] || [ "$prerelease" = "prerelease" ]; then
+		API_URL="https://api.github.com/repos/${author}/${repo}/releases?per_page=1"
 	fi
 
-	RELEASE_INFO=$(curl -s "https://api.github.com/repos/${author}/${repo}/releases/latest")
+	echo ${API_URL}
+	RELEASE_INFO=$(curl -s ${API_URL})
+	#echo ${RELEASE_INFO}
 	if [ $? -ne 0 ]; then
 		echo "Erreur lors de la recuperation des informations de la release."
 		exit 1
 	fi
 	# .tarball_url
-	DOWNLOAD_URLS=$(echo "${RELEASE_INFO}" | jq -r '.assets[] | .browser_download_url')
+	DOWNLOAD_URLS=$(echo "${RELEASE_INFO}" | jq -r 'if type=="array" then .[] else . end | .assets[] | .browser_download_url')
 
 	while IFS= read -r URL; do
 		if [ -z "${URL}" ]; then
