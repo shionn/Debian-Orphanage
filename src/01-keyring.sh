@@ -1,13 +1,18 @@
 #!/bin/bash
 
+if [ -z "$1" ]; then
+    echo "Erreur : le fingerprint GPG n'a pas été fourni en paramètre."
+    echo "Usage : $0 <fingerprint>"
+    echo "Faire un 'gpg --list-secret-key' pour trouver la valeur hexa d'environ 40 caractere"
+    exit 1
+fi
+
+
 project=orphanage
-version=1.0.0
+version=1.0.2
 
-cd build
-
-rm -Rf ${project}-keyring
-mkdir -p ${project}-keyring
-cd ${project}-keyring
+mkdir -p build/trixie/keyring/
+cd build/trixie/keyring/
 
 mkdir -p ${project}-keyring-${version}
 cd ${project}-keyring-${version}
@@ -25,10 +30,16 @@ mkdir -p usr/share/keyrings
 gpg --export-options export-minimal --export $1 > usr/share/keyrings/${project}.pgp
 
 mkdir -p etc/apt/sources.list.d
-echo "deb [signed-by=/usr/share/keyrings/${project}.pgp] orphanage.shionn.org/ trixie main" > etc/apt/sources.list.d/${project}.list
+echo "# Orphan package by shionn
+Types: deb
+Architectures: amd64
+URIs: http://orphanage.shionn.org
+Suites: trixie
+Components: main
+Signed-By: /usr/share/keyrings/${project}.pgp
+" > etc/apt/sources.list.d/${project}.sources
 
 cd ..
 
 dpkg -b ${project}-keyring-${version}
 
-mv ${project}-keyring-${version}.deb ../temp
