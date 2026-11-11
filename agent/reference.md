@@ -123,3 +123,35 @@ Tous les scripts sont censés être lancés automatiquement, soit via la **cront
 - **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
 - **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
 - **README.md** : très court, à enrichir (installation, contribution).
+### Fonction réutilisable : `download_github` (`99-functions.sh`)
+Télécharge les assets d'une **release** d'un repo GitHub.
+### Fonction réutilisable : `download_github` (`99-functions.sh`)
+Télécharge les assets d'une **release** d'un repo GitHub.
+```bash
+download_github <author> <repo> [pattern]   # pattern : regex ERE, défaut : .*\.deb
+```
+- Récupère la release la plus récente via `https://api.github.com/repos/<author>/<repo>/releases/latest`.
+- Lit les `browser_download_url` des assets (nécessite **`jq`**).
+- **`pattern` est une regex ERE** (match `[[ =~ ]]`) : seuls les noms de fichier correspondants sont téléchargés, le reste est ignoré.
+- **`--exclude` supprimé** (le regex positif exprime directement ce qu'on garde).
+- Télécharge dans le **dossier courant** sous le nom du fichier (`basename` de l'URL).
+- Dépendances : `curl`, `jq`.
+
+Exemple (umu : garder uniquement le `.deb` amd64 réel, exclure implicitement `debian_12`/`arm64`) :
+```bash
+download_github umu umu-core "^umu-.*_[0-9][^_]*_amd64\.deb$"
+```
+download_github <author> <repo> [pattern] [--exclude pattern]...   # pattern par défaut : *.deb
+```
+- Récupère la release la plus récente via `https://api.github.com/repos/<author>/<repo>/releases/latest`.
+- Lit les `browser_download_url` des assets (nécessite **`jq`**).
+- Filtre par nom de fichier (glob non échappé) ; supporte **plusieurs `--exclude "pattern"`** (un suffit pour exclure).
+- Télécharge dans le **dossier courant** sous le nom du fichier (`basename` de l'URL).
+- Dépendances : `curl`, `jq`.
+
+Exemple (umu : garder les `.deb` amd64, exclure le packaging Debian 12 et arm64) :
+```bash
+download_github umu umu-core "*.deb" \
+  --exclude "*debian_12*" \
+  --exclude "*arm64*"
+```
