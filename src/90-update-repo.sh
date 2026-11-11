@@ -25,6 +25,7 @@ SignWith: yes
 #mv temp/*~*.deb build/experimental/
 #mv temp/*.deb   build/trixie/
 
+reprepro -b /var/www/html includedeb trixie       build/trixie-local/*/*.deb
 reprepro -b /var/www/html includedeb trixie       build/trixie/*/*.deb
 reprepro -b /var/www/html includedeb experimental build/experimental/*/*.deb
 

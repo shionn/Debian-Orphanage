@@ -9,10 +9,10 @@ fi
 
 
 project=orphanage
-version=1.0.2
+version=1.0.3
 
-mkdir -p build/trixie/keyring/
-cd build/trixie/keyring/
+mkdir -p build/trixie-github/keyring/
+cd build/trixie-github/keyring/
 
 mkdir -p ${project}-keyring-${version}
 cd ${project}-keyring-${version}
