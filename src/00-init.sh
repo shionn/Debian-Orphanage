@@ -1,5 +1,5 @@
 #!/bin/bash
 
-apt instal reprepro lighttpd
+apt install reprepro lighttpd curl jq
 
 
