@@ -8,10 +8,13 @@ src_dir="src"
 
 for script in "$src_dir"/*.sh; do
 	[ -e "$script" ] || continue
-	prefix="${script%%[!0-9]*}"		  # part numerique avant le premier tiret
+	basename="${script##*/}"          # ne garde que "10-umu.sh" (sans src/)
+	prefix="${basename%%[!0-9]*}"     # ne garde que "10"
 	if [[ "$prefix" =~ ^[0-9]+$ ]] && [ "$prefix" -ge 10 ] && [ "$prefix" -le 89 ]; then
 		echo "== $script =="
 		bash "$script"
 	fi
 done
+
+echo "== publication =="
 bash "src/90-update-repo.sh"
