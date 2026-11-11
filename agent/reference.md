@@ -116,7 +116,26 @@ download_github umu umu-core "^umu-.*_[0-9][^_]*_amd64\.deb$"
 
 ### Packages actuels (10–16)
 Chaque script fait `mkdir -p build/trixie/<pkg>/` puis `cd` dedans, puis `download_github`.
-| Script | Package | Source | Regex |
+### Fonction réutilisable : `download_github` (`99-functions.sh`)
+Télécharge les assets d'une **release** d'un repo GitHub.
+```bash
+download_github <author> <repo> [pattern] [release|pre-release]   # pattern : regex ERE, défaut : .*\.deb
+```
+- Récupère la release la plus récente via `https://api.github.com/repos/<author>/<repo>/releases/latest`.
+- **`pattern`** : regex ERE (`[[ =~ ]]`) — seuls les noms de fichier correspondants sont téléchargés.
+- **4e argument** : `release` (défaut, stable) ou `pre-release` → ajoute `?pre=1` à l'API pour inclure les prereleases.
+- **`--exclude` supprimé** (le regex positif exprime directement ce qu'on garde).
+- Télécharge dans le **dossier courant** sous le nom du fichier (`basename` de l'URL).
+- Dépendances : `curl`, `jq`.
+
+Exemple validé par shionn (umu : garde le `.deb` amd64, exclut implicitement `debian-12`/`arm64`/`ubuntu`/`.rpm`/`.tar`) :
+```bash
+download_github umu umu-core "^umu-.*_[0-9][^_]*_amd64\.deb$"
+```
+Exemple avec prereleases :
+```bash
+download_github author repo ".*\.deb" pre-release
+```
 |---|---|---|---|
 | `10-umu.sh` | umu-launcher | GitHub `Open-Wine-Components/umu-launcher` | `.*(amd64\|all)_debian-13.deb` (amd64 + all) |
 | `11-openrgb.sh` | openrgb | GitHub `CalcProgrammer1/OpenRGB` | `.*amd64_trixie_.*.deb` |
