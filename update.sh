@@ -12,7 +12,9 @@ for script in "$src_dir"/*.sh; do
 	prefix="${basename%%[!0-9]*}"     # ne garde que "10"
 	if [[ "$prefix" =~ ^[0-9]+$ ]] && [ "$prefix" -ge 10 ] && [ "$prefix" -le 89 ]; then
 		echo "== $script =="
-		bash "$script"
+		if ! bash "$script"; then
+			echo "!! echec dans $script" >&2
+		fi
 	fi
 done
 

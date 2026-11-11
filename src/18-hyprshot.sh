@@ -14,7 +14,8 @@ fi
 
 if [ -f "$project-$version.deb" ]; then
 	echo "a jour $version"
-	exit 1
+	# deja la = OK, pas d'erreur
+	exit 0
 fi
 
 git clone -b $version git@github.com:Gustash/Hyprshot.git ${version}
