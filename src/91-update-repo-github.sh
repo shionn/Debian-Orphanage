@@ -34,3 +34,10 @@ reprepro -b docs export experimental
 
 #rm build/experimental/*.deb
 #rm build/trixie/*.deb
+
+if [[ `git status --porcelain` ]]
+then
+	git add --all
+	git commit -am "Auto Build"
+	git push
+fi
