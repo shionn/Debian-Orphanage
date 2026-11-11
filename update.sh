@@ -4,6 +4,8 @@
 
 set -e
 
+git pull
+
 src_dir="src"
 
 for script in "$src_dir"/*.sh; do
