@@ -15,13 +15,20 @@ Cloné dans un **container Debian Proxmox** `Orphanage`, au chemin **`/root/Orph
   - `10-` à `89-` : un script par package (récupération/construction).
   - `90-` : mise à jour du repo (`reprepro`).
   - `99-functions.sh` : **librairie à `source`** (pas exécutée dans l'ordre).
-- **Un seul dépôt** : `reprepro/` → `orphanage.shionn.org` (local). Plus de double repo.
+- **Un seul dépôt** : `reprepro/` → `orphanage.shionn.org` (local).
+- **`update.sh`** (racine) exécute les scripts `10-*` à `89-*` dans l'ordre (set -e).
 - **Référence** : `agent/reference.md` — le relire/mettre à jour avant toute modification.
 - **Signature** : les `.deb` doivent être signés par la clé shionn (`SignWith: yes`).
 
+## Sécurité
+- **La clé privée GPG reste locale** (`~/.gnupg`), **hors git**. Les scripts ne contiennent qu'un identifiant (`SignKey:`).
+## Flux actuel (cohérent)
+Scripts 10-16 déposent les `.deb` dans `build/trixie/<pkg>/<fichier>.deb`. `90-update-repo.sh` inclut via `build/trixie/*/*.deb` (2 niveaux) et exporte le pool vers `/var/www/html/pool/` (config root `-b /var/www/html`). À exécuter depuis la racine du projet.
+Les scripts 10-16 déposent les `.deb` dans `build/trixie/<pkg>/` (sous-dossier), mais `90-update-repo.sh` lit `build/*.deb` (plateforme) → ne trouve pas les packages. À corriger.
+
 ## À ne pas faire
-- Ne pas déplacer de fichiers hors de leur rôle (ex. ne pas briser le flux `temp/` → `build/` → `www/`).
+- Ne pas déplacer de fichiers hors de leur rôle (ex. ne pas briser le flux `build/` → `www/`).
 - Ne pas modifier les valeurs clés (Origin, codenames, maintainer) sans raison.
 
 ## Incohérence connue
-`01-keyring.sh` sort le `.deb` dans `temp/`, mais `90-update-repo.sh` lit `build/`. À clarifier.
+`01-keyring.sh` sort le `.deb` dans `build/trixie/keyring/`, mais `90-update-repo.sh` lit `build/`. À clarifier.
