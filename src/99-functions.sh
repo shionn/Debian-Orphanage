@@ -23,7 +23,7 @@ download_github() {
 		API_URL="https://api.github.com/repos/${author}/${repo}/releases?per_page=1"
 	fi
 
-	echo ${API_URL}
+	#echo ${API_URL}
 	RELEASE_INFO=$(curl -s ${API_URL})
 	#echo ${RELEASE_INFO}
 	if [ $? -ne 0 ]; then
@@ -55,3 +55,20 @@ download_github() {
 		fi
 	done <<< "${DOWNLOAD_URLS}"
 }
+
+github_get_last_release_tag() {
+	local author="$1"
+	local repo="$2"
+	
+	API_URL="https://api.github.com/repos/${author}/${repo}/releases/latest"
+	RELEASE_INFO=$(curl -s ${API_URL})
+
+	if [ $? -ne 0 ]; then
+		echo "Erreur lors de la recuperation des informations de la release."
+		return 1
+	fi
+	TAG_NAME=$(echo "${RELEASE_INFO}" | jq -r '.tag_name')
+	echo ${TAG_NAME}
+	return 0
+}
+
