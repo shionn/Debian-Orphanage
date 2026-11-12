@@ -1,9 +1,10 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-    echo "Erreur : le fingerprint GPG n'a pas été fourni en paramètre."
-    echo "Usage : $0 <fingerprint>"
-    echo "Faire un 'gpg --list-secret-key' pour trouver la valeur hexa d'environ 40 caractere"
+# Récupération automatique du fingerprint depuis la clé secrète GPG
+sign=$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
+
+if [ -z "$sign" ]; then
+    echo "Erreur : aucune clé secrète GPG trouvée. Vérifiez ~/.gnupg (ou le keyring d'importation)."
     exit 1
 fi
 
@@ -27,7 +28,7 @@ Maintainer: Shionn <shionn@gmail.com>
 Description: OpenPGP archive certificates of ${project}" > DEBIAN/control
 
 mkdir -p usr/share/keyrings
-gpg --export-options export-minimal --export $1 > usr/share/keyrings/${project}.pgp
+gpg --export-options export-minimal --export $sign > usr/share/keyrings/${project}.pgp
 
 mkdir -p etc/apt/sources.list.d
 echo "# Orphan package by shionn
@@ -42,4 +43,3 @@ Signed-By: /usr/share/keyrings/${project}.pgp
 cd ..
 
 dpkg -b ${project}-keyring-${version}
-

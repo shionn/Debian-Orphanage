@@ -58,7 +58,8 @@ Exécuter les scripts `src/` dans l'ordre croissant de leur index :
 ```
 ./src/00-init.sh            # setup (une fois)
 source ./src/99-functions.sh
-./src/01-keyring-local.sh <FINGERPRINT>   # dépôt local (orphanage.shionn.org)
+./src/01-keyring-local.sh          # fingerprint récupéré automatiquement (clé secrète GPG)
+./src/01-keyring-github.sh         # idem
 ./src/01-keyring-github.sh <FINGERPRINT>   # dépôt GitHub (shionn.github.io/Debian-Orphanage)
 ./src/NN-pkg.sh             # un par package (10–89)
 ./src/90-update-repo.sh     # rebuild du dépôt
@@ -74,12 +75,21 @@ bash update.sh              # exécute src/10-* à src/89-* dans l'ordre (set -e
   - `reprepro -b /var/www/html includedeb experimental build/experimental/*/*.deb` → experimental (matches rien tant qu'aucun package n'y est déposé).
   - `reprepro -b /var/www/html export trixie` / `export experimental` → exporte le pool vers `/var/www/html/pool/` (servi par lighttpd/webroot).
   - Le script doit être exécuté depuis la **racine du projet** (`/root/Orphanage`) pour que `build/trixie/*/*.deb` se résolve.
-  - Les anciennes lignes `mv temp/*`/`build/trixie/` sont **commentées** — ne pas les activer sans raison.
 ### Obtenir le fingerprint GPG
+Le fingerprint est récupéré **automatiquement** depuis la clé secrète GPG — plus besoin de le passer en paramètre :
+```bash
+sign=$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
 ```
-gpg --list-secret-key
+→ `--with-colons` (format colon) + `awk -F: '/^fpr:/' {print $10; exit}` prend le **premier** `fpr:` = empreinte hexa de la clé principale (~40 caractères). Si vide → erreur + `exit 1`.
+
+### Obtenir le fingerprint GPG
+Le fingerprint est récupéré **automatiquement** depuis la clé secrète GPG — plus besoin de le passer en paramètre :
+```bash
+sign=$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
 ```
-→ récupérer l'empreinte hexa (~40 caractères) sous la ligne `sec` (clé principale).
+→ `--with-colons` (format colon) + `awk -F: '/^fpr:/' {print $10; exit}` prend le **premier** `fpr:` = empreinte hexa de la clé principale (~40 caractères). Si vide → erreur + `exit 1`.
+
+   - Récupère d'abord le fingerprint GPG **automatiquement** depuis la clé secrète (`gpg --list-secret-keys --with-colons | awk ...`), plus de paramètre `$1` requis ; sinon erreur + `exit 1`.
 
 ### Rôle de chaque script (état actuel)
 - **`00-init.sh`** :
@@ -195,10 +205,13 @@ download_github author repo ".*\.deb" pre-release
 - `update.sh` (racine) exécute les scripts `10-*` à `89-*` dans l'ordre, avec `set -e` (arrêt à la première erreur).
 - Lancement automatique global : **crontab ou script racine** à préciser (cadence, dépendances, gestion des échecs, idempotence).
 - **`.github/workflows/packages.yml`** (workflow GitHub Actions, iter 1) :
-  - `workflow_dispatch` (manuel) → `runs-on: debian-13`.
-  - Étapes : checkout → `apt-get install jq` → boucle `10-*` à `89-*` (chacun `source`e `99-functions.sh`) → `src/91-update-repo-github.sh` (`continue-on-error: true`) → `peaceiris/actions-gh-pages@v3` déploie `./docs` sur `shionn.github.io/Debian-Orphanage` (branch `master`).
-  - `91` ne pousse PAS : son `git push` (anciennement L40-45) est commenté — le workflow déploie `docs/` en une fois (pas de double push).
+  - **`on: push`** sur `main`/`master` (déclenchement auto, plus qu'`workflow_dispatch`).
+  - `runs-on: ubuntu-latest` (GitHub-hosted suffit — **pas de self-hosted debian-13**).
+  - `permissions` : `contents: read`, `pages: write`, `id-token: write` ; `environment: github-pages`.
+  - Étapes : checkout → `apt-get install jq reprepro` → boucle `10-*` à `89-*` (chacun `source`e `99-functions.sh`, **fix prefix : `basename="${script##*/}"` puis `prefix="${basename%%[!0-9]*}"` sinon le glob `src/*.sh` ne matche rien → 0s) → step `Importer la clé GPG` → `src/91-update-repo-github.sh` (`continue-on-error: true`) → `actions/deploy-pages@v4` déploie `./docs` (via API Pages, **AUCUN push git**).
+  - `91` ne pousse PAS : son `git push` (anciennement L40-45) est commenté.
   - `build/` est dans `.gitignore` → le workflow ne committe que `docs/`.
+  - **Bloc `env:`** dans le step import : `KEY: ${{ secrets.GPG_PRIVATE_KEY }}` → `echo "$KEY" | tr -d '[:space:]' | base64 -d | gpg --import`.
   - ⚠️ Sans le secret `GPG_PRIVATE_KEY`, `91` échoue à signer (SignWith: yes) → `continue-on-error` → `docs/` déployé mais **sans keyring GitHub** → repo GitHub a des `.deb` signés mais **pas installable via apt** (le keyring GitHub = `01-keyring-github.sh` → `92-update-repo-github-keyring.sh` n'est PAS dans ce workflow).
 
 ## 7. Signature GPG (export)
@@ -211,6 +224,7 @@ download_github author repo ".*\.deb" pre-release
 - **README.md** : très court, à enrichir (installation, contribution).
 - La clé privée vit dans `~/.gnupg` (locale, **hors git**) ; les scripts ne contiennent qu'un identifiant (`SignKey:`).
 - **Clé de signature sans mot de passe** : l'export automatisé ne peut pas demander de passphrase (erreur `GPGME:54: Unusable secret key`). Utilise une clé dédiée sans passphrase.
+- **Secret GitHub** : la clé privée est un **repository secret** `GPG_PRIVATE_KEY` dans le repo `Debian-Orphanage` (Settings → Secrets and variables → **Secrets**, valeur = base64 `base64 -w0` de l'export secret-key). Le workflow la lit via `${{ secrets.GPG_PRIVATE_KEY }}`. `longueur=${#GPG_PRIVATE_KEY}` = 0 → le secret n'est pas lu (nom, section, ou valeur vide).
 
 ## 8. Outils utilisés
 - `reprepro` — construction/export du dépôt Debian.
@@ -236,6 +250,7 @@ download_github author repo ".*\.deb" pre-release
 - **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
 - **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
 - **README.md** : très court, à enrichir (installation, contribution).
+- **Keyring GitHub** : le workflow ne contient PAS `01-keyring-github.sh`/`92` → le repo GitHub a des `.deb` signés mais **sans keyring** = pas installable via apt. Ajouter le keyring GitHub pour rendre le repo installable.
 - **Config root / webroot :** reprepro utilise `-b /var/www/html` et écrit `conf/distributions` à `/var/www/html/conf/`. Le pool exporté est servi depuis `/var/www/html/pool/`. Vérifier que lighttpd/webroot sert bien `/var/www/html/` et que l'URI apt (`orphanage.shionn.org/`) pointe vers ce pool.
 - **Experimental :** `includedeb experimental build/experimental/*/*.deb` ne matche rien tant qu'aucun package n'est déposé dans `build/experimental/`. Décider si un package peut aller en experimental (et comment).
 - **`16-recomp-launcher.sh`** : hors modèle (`curl` direct, source externe) — aligner ou documenter comme exception.
