@@ -56,6 +56,8 @@ download_github() {
 	done <<< "${DOWNLOAD_URLS}"
 }
 
+
+
 github_get_last_release_tag() {
 	local author="$1"
 	local repo="$2"
@@ -72,3 +74,72 @@ github_get_last_release_tag() {
 	return 0
 }
 
+# download_github_last_tag : telecharge les assets d'une release dont le tag_name
+# correspond a un pattern.
+#
+#   download_github_last_tag <author> <repo> <pattern-fichier> <pattern-tag>
+#
+#   pattern-fichier : regex ERE sur le nom de fichier. Seuls les fichiers qui
+#            correspondent sont telecharges (le reste est ignore).
+#   pattern-tag     : regex ERE sur le tag_name. Les releases sont triees plus
+#            recentes en premier ; on prend le premier dont le tag_name correspond.
+#
+# Récupère la release la plus récente dont le tag correspond au pattern, filtre
+# ses assets par regex, puis telecharge dans le dossier courant.
+# dependances : curl, jq
+download_github_last_tag() {
+	local author="$1"
+	local repo="$2"
+	local pattern="${3:-'.*\.deb'}"
+	local tag_pattern="${4:-.*}"
+
+	API_URL="https://api.github.com/repos/${author}/${repo}/releases?per_page=50"
+	RELEASE_INFO=$(curl -s ${API_URL})
+	if [ $? -ne 0 ]; then
+		echo "Erreur lors de la recuperation des informations de la release."
+		return 1
+	fi
+
+	# Parcourt les releases (triees plus recentes en premier) et garde le premier
+	# dont le tag_name correspond au pattern.
+	local TAG_NAME=""
+	while IFS= read -r TAG_NAME; do
+		if [ -z "${TAG_NAME}" ]; then
+			continue
+		fi
+		if [[ "${TAG_NAME}" =~ ${tag_pattern} ]]; then
+			break
+		fi
+	done <<< "$(echo "${RELEASE_INFO}" | jq -r '.[] | .tag_name')"
+
+	if [ -z "${TAG_NAME}" ]; then
+		echo "Aucune release dont le tag_name correspond au pattern '${tag_pattern}'."
+		return 1
+	fi
+
+	# Telecharge les assets de cette release correspondant au pattern de fichier.
+	URLS=$(echo "${RELEASE_INFO}" | jq -r --arg tag "${TAG_NAME}" '.[] | select(.tag_name==$tag) | .assets[] | .browser_download_url')
+
+	while IFS= read -r URL; do
+		if [ -z "${URL}" ]; then
+			continue
+		fi
+		FILENAME=$(basename "${URL}")
+
+		# Filtre regex (ERE) : ne garde que les fichiers correspondants.
+		if [[ "$FILENAME" =~ $pattern ]]; then
+			if [ -f "$FILENAME" ]; then
+				echo "a jour $FILENAME"
+			else
+				echo "Telechargement de ${FILENAME}"
+				curl -L -o "${FILENAME}" "${URL}"
+				if [ $? -ne 0 ]; then
+					echo "Erreur lors du telechargement de ${FILENAME}."
+				fi
+			fi
+		else
+			echo "Ignoré : $FILENAME"
+		fi
+	done <<< "${URLS}"
+	return 0
+}

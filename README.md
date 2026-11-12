@@ -13,16 +13,16 @@ sudo apt update
 
 ## Contenu
 
-- bc-250-control-center
-- discord
-- faugus-launcher
-- freetube
-- heroic-game-launcher
-- hydra-launcher
-- hyprshot
-- openrgb
-- recomp-launcher
-- umu-launcher
+- [BC250 Control Center](https://github.com/movacx/bc250-control-center)
+- [Discord](https://discord.com/)
+- [Faugus Launcher](https://github.com/Faugus/faugus-launcher)
+- [FreeTube](https://freetubeapp.io/)
+- [Heroic Game Launcher](https://heroicgameslauncher.com/)
+- [Hydra Launcher](https://hydralauncher.gg/)
+- [Hyprshot](https://github.com/Gustash/Hyprshot)
+- [OpenRGB](https://openrgb.org/)
+- [Recomp Launcher](https://recomplauncher.com/)
+- [umu](https://github.com/Open-Wine-Components/umu-launcher)
 
 
 
@@ -30,4 +30,4 @@ sudo apt update
 
 WIP
 
-Pour reconstruire votre repo vous devez executer les scripte present dans src un par un mais certain script necessiterons d'etre adapter à vos target. 
+Pour reconstruire votre repo vous devez executer les scripts present dans src un par un mais certain script necessiterons d'etre adapter à vos target. 

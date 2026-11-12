@@ -131,7 +131,21 @@ download_github <author> <repo> [pattern] [release|pre-release]   # pattern : re
 Exemple validé par shionn (umu : garde le `.deb` amd64, exclut implicitement `debian-12`/`arm64`/`ubuntu`/`.rpm`/`.tar`) :
 ```bash
 download_github umu umu-core "^umu-.*_[0-9][^_]*_amd64\.deb$"
+Exemple avec prereleases :
+```bash
+download_github author repo ".*\.deb" pre-release
 ```
+
+### Fonction réutilisable : `github_get_last_release_tag` (`99-functions.sh`)
+Récupère le **tag_name** de la dernière release (pour cloner/git).
+```bash
+TAG=$(github_get_last_release_tag <author> <repo>)   # retourne le tag, 0=OK / 1=erreur
+```
+- Utilise `releases/latest`, `jq -r '.tag_name'`.
+- **`return 1` / `return 0`** (correct — ne tue pas le script appelant).
+- Exemple : `18-hyprshot.sh` fait `version=$(github_get_last_release_tag Gustash Hyprshot)`.
+
+> ⚠️ **`download_github`** utilise encore `exit 1` sur erreur (ligne 31) — ça marche via `update.sh` (`if ! bash "$script"`), mais devrait être `return 1` pour être portable.
 Exemple avec prereleases :
 ```bash
 download_github author repo ".*\.deb" pre-release
@@ -139,14 +153,20 @@ download_github author repo ".*\.deb" pre-release
 |---|---|---|---|
 | `10-umu.sh` | umu-launcher | GitHub `Open-Wine-Components/umu-launcher` | `.*(amd64\|all)_debian-13.deb` (amd64 + all) |
 | `11-openrgb.sh` | openrgb | GitHub `CalcProgrammer1/OpenRGB` | `.*amd64_trixie_.*.deb` |
-| `12-bc250.sh` | bc250-control-center | GitHub `movacx/bc250-control-center` | `.*.deb` (tout) |
+| `16-recomp-launcher.sh` | recomp-launcher | **curl direct** `recomplauncher.com/api/launcher-beta.php?a=download&os=deb` | — (hors `download_github`, `99-functions.sh` commenté) |
+| `17-freetube.sh` | freetube | à confirmer | — |
+| `18-hyprshot.sh` | hyprshot | `git clone -b $tag` GitHub + `dpkg -b` (build complet d'un DEB) | utilise `github_get_last_release_tag` |
 | `13-hydra-launcher.sh` | hydra | GitHub `hydralauncher/hydra` | `.*.deb` (tout) |
 | `14-heroic-games-launcher.sh` | heroic-games-launcher | GitHub `Heroic-Games-Launcher/HeroicGamesLauncher` | `.*amd64.deb` |
 | `15-faugus-launcher.sh` | faugus-launcher | GitHub `Faugus/faugus-launcher` | `.*.deb` (tout) |
 | `16-recomp-launcher.sh` | recomp-launcher | **curl direct** `recomplauncher.com/api/launcher-beta.php?a=download&os=deb` | — (hors `download_github`, `99-functions.sh` commenté) |
 
 > **`16-recomp-launcher.sh`** ne suit pas le modèle : pas de `download_github`, source externe (`recomplauncher.com`). À aligner si possible, ou documenter comme exception.
-
+- **`update.sh`** (racine) exécute les scripts `10-*` à `89-*` dans l'ordre :
+  - Extraction du préfixe corrigée : `basename="${script##*/}"` puis `prefix="${basename%%[!0-9]*}"` (sinon `src/` donne une chaîne vide → aucun script traité).
+  - Gestion d'erreur robuste : `if ! bash "$script"` → un échec de package ne tue pas la boucle (avertissement en stderr).
+  - À la fin : `bash "src/90-update-repo.sh"` (publication du repo).
+  - `set -e` présent — un échec direct (hors `if !`) arrête tout.
 ## 5. Flux d'un nouveau paquet
 1. Récupérer/construire le paquet orphelin → produire un `.deb`, ex. via `download_github`.
 2. Faire traiter le paquet par son script dédié (`NN-pkg.sh`, 10–89), qui dépose le `.deb` dans `build/trixie/<pkg>/`.
@@ -160,7 +180,11 @@ download_github author repo ".*\.deb" pre-release
 ## 7. Signature GPG (export)
 - **Une seule clé** : ta clé GPG personnelle (actuellement ed25519, `sec` + sous-clé `ssb` cv25519).
 - **reprepro** signe les `.deb` + `Release` avec **ta clé secrète**.
-- **`orphanage-keyring`** (`01-keyring.sh`) exporte ta **clé publique** → vérification côté client.
+- **`download_github`** : `exit 1` sur erreur (ligne 31) — fonctionnel via `update.sh` (`if !`), mais devrait être `return 1`.
+- **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
+- **`18-hyprshot.sh`** : `exit 1` sur vraie erreur (ligne 12) — OK (vrai échec), mais `exit 0` sur « a jour » (ligne 18).
+- **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
+- **README.md** : très court, à enrichir (installation, contribution).
 - La clé privée vit dans `~/.gnupg` (locale, **hors git**) ; les scripts ne contiennent qu'un identifiant (`SignKey:`).
 - **Clé de signature sans mot de passe** : l'export automatisé ne peut pas demander de passphrase (erreur `GPGME:54: Unusable secret key`). Utilise une clé dédiée sans passphrase.
 
