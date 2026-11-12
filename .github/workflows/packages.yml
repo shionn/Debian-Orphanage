@@ -42,8 +42,11 @@ jobs:
           chmod 700 ~/.gnupg
           echo "$KEY" | tr -d '[:space:]' | base64 -d | gpg --batch --import
 
+      - name: Générer le keyring
+        run: bash src/01-keyring.sh https://shionn.github.io/Debian-Orphanage
+
       - name: Générer le repo github (91)
-        run: bash src/91-update-repo-github.sh
+        run: bash src/90-update-repo.sh https://shionn.github.io/Debian-Orphanage docs
         continue-on-error: true
 
       - name: Configurer GitHub Pages
