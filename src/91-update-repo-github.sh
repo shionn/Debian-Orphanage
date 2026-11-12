@@ -25,7 +25,8 @@ SignWith: yes
 #mv temp/*~*.deb build/experimental/
 #mv temp/*.deb   build/trixie/
 
-reprepro -b docs includedeb trixie       build/trixie-github/*/*.deb
+# cette ligne est faite manuellement depuis 
+#reprepro -b docs includedeb trixie       build/trixie-github/*/*.deb
 reprepro -b docs includedeb trixie       build/trixie/*/*.deb
 reprepro -b docs includedeb experimental build/experimental/*/*.deb
 
@@ -34,6 +35,7 @@ reprepro -b docs export experimental
 
 #rm build/experimental/*.deb
 #rm build/trixie/*.deb
+exit 0
 
 if [[ `git status --porcelain` ]]
 then

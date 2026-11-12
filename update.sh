@@ -23,3 +23,4 @@ done
 echo "== publication =="
 bash "src/90-update-repo.sh"
 #bash "src/91-update-repo-github.sh"
+bash "src/92-update-repo-github-keyring.sh"
