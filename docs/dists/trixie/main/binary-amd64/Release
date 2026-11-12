@@ -1,0 +1,5 @@
+Component: main
+Origin: shionn.github.io/Debian-Orphanage
+Label: shionn.github.io/Debian-Orphanage
+Architecture: amd64
+Description: Orphanage repository by shionn
