@@ -6,8 +6,9 @@ set -e
 
 git pull
 
-src_dir="src"
+bash "src/01-keyring.sh" "http://orphanage.shionn.org"
 
+src_dir="src"
 for script in "$src_dir"/*.sh; do
 	[ -e "$script" ] || continue
 	basename="${script##*/}"          # ne garde que "10-umu.sh" (sans src/)
@@ -22,5 +23,3 @@ done
 
 echo "== publication =="
 bash "src/90-update-repo.sh"
-#bash "src/91-update-repo-github.sh"
-bash "src/92-update-repo-github-keyring.sh"

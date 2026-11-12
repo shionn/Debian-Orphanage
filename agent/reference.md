@@ -58,9 +58,8 @@ Exécuter les scripts `src/` dans l'ordre croissant de leur index :
 ```
 ./src/00-init.sh            # setup (une fois)
 source ./src/99-functions.sh
-./src/01-keyring-local.sh          # fingerprint récupéré automatiquement (clé secrète GPG)
+./src/01-keyring-local.sh <URI>      # fingerprint auto (clé secrète GPG), URI obligatoire
 ./src/01-keyring-github.sh         # idem
-./src/01-keyring-github.sh <FINGERPRINT>   # dépôt GitHub (shionn.github.io/Debian-Orphanage)
 ./src/NN-pkg.sh             # un par package (10–89)
 ./src/90-update-repo.sh     # rebuild du dépôt
 ```
@@ -82,20 +81,18 @@ sign=$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {prin
 ```
 → `--with-colons` (format colon) + `awk -F: '/^fpr:/' {print $10; exit}` prend le **premier** `fpr:` = empreinte hexa de la clé principale (~40 caractères). Si vide → erreur + `exit 1`.
 
-### Obtenir le fingerprint GPG
-Le fingerprint est récupéré **automatiquement** depuis la clé secrète GPG — plus besoin de le passer en paramètre :
 ```bash
 sign=$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
 ```
 → `--with-colons` (format colon) + `awk -F: '/^fpr:/' {print $10; exit}` prend le **premier** `fpr:` = empreinte hexa de la clé principale (~40 caractères). Si vide → erreur + `exit 1`.
 
-   - Récupère d'abord le fingerprint GPG **automatiquement** depuis la clé secrète (`gpg --list-secret-keys --with-colons | awk ...`), plus de paramètre `$1` requis ; sinon erreur + `exit 1`.
-
 ### Rôle de chaque script (état actuel)
 - **`00-init.sh`** :
   - Installe `reprepro` et `lighttpd` (serveur web du dépôt).
 - **`01-keyring-local.sh`** (et `01-keyring-github.sh`, mêmes mécanismes, version `1.0.4`) :
-  - Vérifie d'abord que le fingerprint est fourni (`$1`) ; sinon erreur + usage + `exit 1`.
+  - Le **fingerprint** GPG est récupéré **automatiquement** depuis la clé secrète (`gpg --list-secret-keys --with-colons | awk ...`) — plus de paramètre requis ; sinon erreur + `exit 1`.
+  - **`01-keyring-local.sh`** : l'URI est un **paramètre obligatoire** (`$1`) qui définit le dépôt vers lequel pointer le keyring ; sinon erreur + usage + `exit 1`.
+  - **`01-keyring-github.sh`** : l'URI reste **en dur** (`https://shionn.github.io/Debian-Orphanage`) — aucun paramètre.
   - Construit le paquet `orphanage-keyring` (version `1.0.4`).
   - `DEBIAN/control` : `misc / optional / all`.
   - Installe la clé sous `/usr/share/keyrings/orphanage.<project>.pgp` (via `gpg --export-options export-minimal`).
