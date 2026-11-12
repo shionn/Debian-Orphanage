@@ -4,6 +4,9 @@ on:
   workflow_dispatch:          # lancement manuel depuis Actions
 
 jobs:
+  deploy:
+    environment:
+      name: github-pages
   build:
     runs-on: ubuntu-latest
     permissions:
