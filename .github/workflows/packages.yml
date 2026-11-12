@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Installer jq
+      - name: Installer jq reprepro
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Build des paquets (10-89)
