@@ -33,15 +33,13 @@ jobs:
             fi
           done
 
-      - name: DEBUG secret
-        run: echo "longueur=${#GPG_PRIVATE_KEY}"
-
-
       - name: Importer la clé GPG
+        env:
+          KEY: ${{ secrets.GPG_PRIVATE_KEY }
         run: |
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
-          echo "$GPG_PRIVATE_KEY" | tr -d '[:space:]' | base64 -d | gpg --batch --import
+          echo "$KEY" | tr -d '[:space:]' | base64 -d | gpg --batch --import
           gpg --list-secret-key
 
       - name: Générer le repo github (91)
