@@ -32,6 +32,11 @@ jobs:
               fi
             fi
           done
+
+      - name: DEBUG secret
+        run: echo "longueur=${#GPG_PRIVATE_KEY}"
+
+
       - name: Importer la clé GPG
         run: |
           mkdir -p ~/.gnupg
