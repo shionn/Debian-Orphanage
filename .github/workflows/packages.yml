@@ -45,7 +45,7 @@ jobs:
       - name: Générer le keyring
         run: bash src/01-keyring.sh https://shionn.github.io/Debian-Orphanage
 
-      - name: Générer le repo github (91)
+      - name: Générer le repo github (90)
         run: bash src/90-update-repo.sh https://shionn.github.io/Debian-Orphanage docs
         continue-on-error: true
 
