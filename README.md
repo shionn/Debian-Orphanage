@@ -1,13 +1,13 @@
 
 # Repository debian pour package orphelin
 
-L'idée c'est de faire unr epository qui contient tous les paquets debian (que je trouve utile) qui n'ont pas de repo officiel en un seul repo. 
+L'idée c'est de faire un repository qui contient tous les paquets debian (que je trouve utile) qui n'ont pas de repo officiel en un seul repo. 
 
 ## Installation
 
 ~~~
-wget https://shionn.github.io/Debian-Orphanage/pool/main/o/orphanage-keyring/orphanage-keyring_1.0.3_all.deb
-sudo apt install ./orphanage-keyring_1.0.3_all.deb
+wget https://shionn.github.io/Debian-Orphanage/pool/main/o/orphanage-keyring/orphanage-keyring_1.0.4_all.deb
+sudo apt install ./orphanage-keyring_1.0.4_all.deb
 sudo apt update
 ~~~
 
