@@ -6,6 +6,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -33,11 +37,14 @@ jobs:
         run: bash src/91-update-repo-github.sh
         continue-on-error: true
 
-      - name: Déployer docs/ sur GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Configurer GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Préparer l'artifact Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          user_name: shionn
-          user_email: shionn@shionn.org
-          publish_branch: master
+          path: ./docs
+
+      - name: Déployer sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
