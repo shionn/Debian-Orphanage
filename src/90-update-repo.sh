@@ -1,27 +1,34 @@
 #!/bin/bash
 
-mkdir -p /var/www/html/conf/
+if [ $# -lt 2 ]; then
+    echo "Usage : $0 <origin-url> <config-root>"
+    exit 1
+fi
 
-echo "Origin: orphanage.shionn.org
-Label: orphanage.shionn.org
+ORIGIN=$1
+CONFIG_ROOT=$2
+
+mkdir -p "${CONFIG_ROOT}/conf/"
+
+echo "Origin: ${ORIGIN}
+Label: ${ORIGIN}
 Codename: trixie
 Architectures: amd64
 Components: main
 Description: Orphanage repository by shionn
 SignWith: yes
 
-Origin: orphanage.shionn.org
-Label: orphanage.shionn.org
+Origin: ${ORIGIN}
+Label: ${ORIGIN}
 Codename: experimental
 Architectures: amd64
 Components: main
 Description: Orphanage repository by shionn
 SignWith: yes
-" > /var/www/html/conf/distributions
+" > "${CONFIG_ROOT}/conf/distributions"
 
-reprepro -b /var/www/html includedeb trixie       build/trixie/*/*.deb
-reprepro -b /var/www/html includedeb experimental build/experimental/*/*.deb
+reprepro -b "${CONFIG_ROOT}" includedeb trixie       build/trixie/*/*.deb
+reprepro -b "${CONFIG_ROOT}" includedeb experimental build/experimental/*/*.deb
 
-reprepro -b /var/www/html export trixie
-reprepro -b /var/www/html export experimental
-
+reprepro -b "${CONFIG_ROOT}" export trixie
+reprepro -b "${CONFIG_ROOT}" export experimental

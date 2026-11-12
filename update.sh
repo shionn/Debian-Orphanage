@@ -22,4 +22,4 @@ for script in "$src_dir"/*.sh; do
 done
 
 echo "== publication =="
-bash "src/90-update-repo.sh"
+bash "src/90-update-repo.sh" "orphanage.shionn.org" "/var/www/html"
