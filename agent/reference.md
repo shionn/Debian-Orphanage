@@ -33,7 +33,7 @@
 | `src/` | Scripts ordonnés par préfixe numérique |
 | `reprepro/` | Config + pool du dépôt local (`orphanage.shionn.org`) |
 | `build/trixie/<pkg>/` | `.deb` téléchargés par chaque script packageur (sous-dossier par package) |
-| `build/` | Dossier racine du travail (attendu par `90-update-repo.sh`, cf. incohérence §10) |
+| `build/` | Dossier racine du travail (déposé par les scripts packageurs, lu par `90-update-repo.sh` à 2 niveaux : `build/trixie-*/*/*.deb` + `build/experimental/*/*.deb`) |
 | `build/experimental/` | `.deb` expérimentaux (cf. `90-update-repo.sh`) |
 | `temp/` | Ancienne zone tampon du keyring (plus utilisée) |
 | `www/` | Export du dépôt `reprepro`, servi via `http://orphanage.shionn.org/` |
@@ -58,7 +58,8 @@ Exécuter les scripts `src/` dans l'ordre croissant de leur index :
 ```
 ./src/00-init.sh            # setup (une fois)
 source ./src/99-functions.sh
-./src/01-keyring.sh <FINGERPRINT>
+./src/01-keyring-local.sh <FINGERPRINT>   # dépôt local (orphanage.shionn.org)
+./src/01-keyring-github.sh <FINGERPRINT>   # dépôt GitHub (shionn.github.io/Debian-Orphanage)
 ./src/NN-pkg.sh             # un par package (10–89)
 ./src/90-update-repo.sh     # rebuild du dépôt
 ```
@@ -83,19 +84,24 @@ gpg --list-secret-key
 ### Rôle de chaque script (état actuel)
 - **`00-init.sh`** :
   - Installe `reprepro` et `lighttpd` (serveur web du dépôt).
-  - ⚠️ Contient une faute de frappe : `apt instal` (manque un `l`). À corriger.
-- **`01-keyring.sh`** :
+- **`01-keyring-local.sh`** (et `01-keyring-github.sh`, mêmes mécanismes, version `1.0.4`) :
   - Vérifie d'abord que le fingerprint est fourni (`$1`) ; sinon erreur + usage + `exit 1`.
-  - Construit le paquet `orphanage-keyring` (**version `1.0.2`**).
+  - Construit le paquet `orphanage-keyring` (version `1.0.4`).
   - `DEBIAN/control` : `misc / optional / all`.
-  - Installe la clé sous `/usr/share/keyrings/orphanage.shionn.org.gpg` (via `gpg --export-options export-minimal`).
-  - Crée l'entry apt au **format `.sources`** : `etc/apt/sources.list.d/orphanage.shionn.org.sources` (`Types: deb`, `URIs:`, `Suites: trixie`, `Components: main`, `Signed-By:`).
-  - Sortie : le `.deb` est déposé dans **`build/trixie/keyring/`**.
+  - Installe la clé sous `/usr/share/keyrings/orphanage.<project>.pgp` (via `gpg --export-options export-minimal`).
+  - Crée l'entry apt au **format `.sources`** : `etc/apt/sources.list.d/orphanage.<project>.sources` (`Types: deb`, `URIs:`, `Suites: trixie`, `Components: main`, `Signed-By:`).
+  - Sortie : le `.deb` est déposé dans **`build/trixie-local/keyring/`** (local) ou **`build/trixie-github/keyring/`** (GitHub).
 - **`90-update-repo.sh`** :
-  - Écrit `www/conf/distributions` (Origin/Label `orphanage.shionn.org`, Codenames `trixie` + `experimental`, Composant `main`, Arch `amd64`).
-  - Sépare les `.deb` : trixie = stable (`build/*.deb`), experimental = le reste (`build/*~*.deb`).
-  - `reprepro -b www/` : build → export des deux composants.
-  - ⚠️ Lit `build/*.deb` (plateforme) alors que les packages sont dans `build/trixie/<pkg>/` → cf. incohérence §10.
+  - Écrit `conf/distributions` à `/var/www/html/conf/distributions` (Origin/Label `orphanage.shionn.org`, Codenames `trixie` + `experimental`, Composant `main`, Arch `amd64`, `SignWith: yes`).
+  - `includedeb` à 2 niveaux : `reprepro -b /var/www/html includedeb trixie build/trixie-local/*/*.deb` puis `build/trixie/*/*.deb` (récupère les packages ET le keyring-local), et `includedeb experimental build/experimental/*/*.deb`.
+  - `reprepro -b /var/www/html export trixie` / `export experimental` → exporte le pool vers `/var/www/html/pool/` (servi par lighttpd/webroot).
+  - Doit être exécuté depuis la **racine du projet** (`/root/Orphanage`) pour que `build/trixie/*/*.deb` se résolve.
+  - Les anciennes lignes `mv temp/*`/`build/trixie/` sont **commentées** — ne pas les activer sans raison.
+- **`91-update-repo-github.sh`** :
+  - Régénère `docs/conf/distributions` (Origin/Label `shionn.github.io/Debian-Orphanage`, codenames `trixie` + `experimental`).
+  - `reprepro -b docs includedeb trixie build/trixie-github/*/*.deb` (keyring GitHub) puis export trixie/experimental.
+- **`92-update-repo-github-keyring.sh`** :
+  - Régénère `docs/conf/distributions`, puis `includedeb trixie build/trixie/*/*.deb` + export, suivi d'un `git push` vers le dépôt GitHub.
 
 ### Fonction réutilisable : `download_github` (`99-functions.sh`)
 Télécharge les assets d'une **release** d'un repo GitHub.
@@ -203,7 +209,7 @@ download_github author repo ".*\.deb" pre-release
 ## 8. Outils utilisés
 - `reprepro` — construction/export du dépôt Debian.
 - `lighttpd` — serveur web du dépôt (`www/`).
-- `dpkg -b` — assemblage des paquets.
+| Package keyring | `orphanage-keyring` v`1.0.4` |
 - `gpg` — export de la clé de signature.
 - `curl`, `jq` — téléchargement des paquets depuis GitHub (fonction `download_github`).
 
@@ -215,7 +221,7 @@ download_github author repo ".*\.deb" pre-release
 | Composant | `main` |
 | Architecture | `amd64` |
 | Maintainer (control) | `Shionn <shionn@gmail.com>` |
-| Package keyring | `orphanage-keyring` v`1.0.2` |
+| Package keyring | `orphanage-keyring` v`1.0.4` |
 | Chemin d'installation | `/root/Orphanage` (container Debian) |
 
 ## 10. Questions ouvertes / TODO
@@ -231,8 +237,7 @@ download_github author repo ".*\.deb" pre-release
 - **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
 - **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
 - **README.md** : très court, à enrichir (installation, contribution).
-- **⚠️ Incohérence de chemins :** les scripts packageurs déposent les `.deb` dans **`build/trixie/<pkg>/`** (sous-dossier), mais `90-update-repo.sh` fait `mv build/*.deb build/trixie/` et lit `build/trixie/*.deb` (plateforme).
-  → Les `.deb` ne sont jamais à la racine de `build/`. `90-update-repo.sh` ne trouvera pas les packages. À corriger (recursion `build/trixie/*/` ? ou scripts qui déposent à `build/` ?).
+
 - **Orchestration :** crontab vs script racine — à choisir et documenter.
 - **`16-recomp-launcher.sh`** : hors modèle (`curl` direct, source externe) — aligner ou documenter comme exception.
 - **`99-functions.sh`** : convention « ordre d'exécution » vs « librairie à `source` » — à clarifier.
