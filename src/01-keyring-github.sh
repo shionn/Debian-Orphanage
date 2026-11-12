@@ -9,7 +9,7 @@ fi
 
 
 project=orphanage
-version=1.0.3
+version=1.0.4
 
 mkdir -p build/trixie-github/keyring/
 cd build/trixie-github/keyring/
@@ -33,7 +33,7 @@ mkdir -p etc/apt/sources.list.d
 echo "# Orphan package by shionn
 Types: deb
 Architectures: amd64
-URIs: http://orphanage.shionn.org
+URIs: https://shionn.github.io/Debian-Orphanage
 Suites: trixie
 Components: main
 Signed-By: /usr/share/keyrings/${project}.pgp

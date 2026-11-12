@@ -9,7 +9,7 @@ fi
 
 
 project=orphanage
-version=1.0.3
+version=1.0.4
 
 mkdir -p build/trixie-local/keyring/
 cd build/trixie-local/keyring/

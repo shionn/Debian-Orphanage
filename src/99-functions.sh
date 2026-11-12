@@ -114,6 +114,7 @@ download_github_last_tag() {
 
 	if [ -z "${TAG_NAME}" ]; then
 		echo "Aucune release dont le tag_name correspond au pattern '${tag_pattern}'."
+		LAST_GITHUB_TAG="${TAG_NAME}"
 		return 1
 	fi
 
@@ -141,5 +142,6 @@ download_github_last_tag() {
 			echo "Ignoré : $FILENAME"
 		fi
 	done <<< "${URLS}"
+	LAST_GITHUB_TAG="${TAG_NAME}"
 	return 0
 }

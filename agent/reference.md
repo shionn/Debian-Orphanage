@@ -145,6 +145,18 @@ TAG=$(github_get_last_release_tag <author> <repo>)   # retourne le tag, 0=OK / 1
 - **`return 1` / `return 0`** (correct — ne tue pas le script appelant).
 - Exemple : `18-hyprshot.sh` fait `version=$(github_get_last_release_tag Gustash Hyprshot)`.
 
+### Fonction réutilisable : `download_github_last_tag` (`99-functions.sh`)
+Télécharge les assets d'une release dont le **tag_name** correspond à un pattern (pour cloner/git sur un tag précis).
+```bash
+download_github_last_tag <author> <repo> <pattern-fichier> <pattern-tag>
+```
+- Récupère `releases?per_page=50`, parcourt les `tag_name` (plus récents d'abord) et prend le **premier** correspondant au `pattern-tag` (regex ERE).
+- Télécharge les assets de cette release dont le nom correspond au `pattern-fichier` (regex ERE, comme `download_github`).
+- Expose le tag retenu via la variable globale **`LAST_GITHUB_TAG`** (à lire dans le script appelant — ex. `20-proton.sh`).
+- **`return 1` / `return 0`** (ne tue pas le script appelant) ; message « Aucune release ... » si aucun tag ne correspond.
+- Exemple : `download_github_last_tag GloriousEggroll proton-ge-custom '.*\.tar\.gz' 'GE-Proton9-.*'` puis `version="${LAST_GITHUB_TAG}"`.
+
+
 > ⚠️ **`download_github`** utilise encore `exit 1` sur erreur (ligne 31) — ça marche via `update.sh` (`if ! bash "$script"`), mais devrait être `return 1` pour être portable.
 Exemple avec prereleases :
 ```bash
