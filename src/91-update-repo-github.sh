@@ -37,9 +37,12 @@ reprepro -b docs export experimental
 #rm build/trixie/*.deb
 exit 0
 
-if [[ `git status --porcelain` ]]
-then
-	git add --all
-	git commit -am "Auto Build"
-	git push
-fi
+# git push commenté : le workflow GitHub Actions (packages.yml) déploie docs/
+# directement sur le repo GitHub + GitHub Pages en une fois (pas de double push).
+# Réactiver si on veut un push autonome depuis la CLI :
+#
+#   if [[ `git status --porcelain` ]]; then
+#       git add --all
+#       git commit -am "Auto Build"
+#       git push
+#   fi

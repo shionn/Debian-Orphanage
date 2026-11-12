@@ -1,0 +1,43 @@
+name: Orphanage — build + publish paquets
+
+on:
+  workflow_dispatch:          # lancement manuel depuis Actions
+
+jobs:
+  build:
+    runs-on: debian-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Build des paquets (10-89)
+        run: |
+          set -e
+          for script in src/*.sh; do
+            [ -e "$script" ] || continue
+            prefix="${script##*/%%[!0-9]*}"
+            if [[ "$prefix" =~ ^[0-9]+$ ]] && [ "$prefix" -ge 10 ] && [ "$prefix" -le 89 ]; then
+              echo "== $script =="
+              if ! bash "$script"; then
+                echo "!! echec dans $script" >&2
+              fi
+            fi
+          done
+
+      - name: Générer le repo github (91)
+        # Résilient : sans la clé GPG, reprepro échoue à signer (SignWith: yes).
+        # L'étape échoue mais le deploy de docs/ a lieu quand même.
+        # Plus tard : ajouter le secret GPG_PRIVATE_KEY → 91 signe → tout fonctionne.
+        run: bash src/91-update-repo-github.sh
+        continue-on-error: true
+
+      - name: Déployer docs/ sur GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          user_name: shionn
+          user_email: shionn@shionn.org
+          publish_branch: master

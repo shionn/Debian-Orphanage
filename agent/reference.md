@@ -194,6 +194,12 @@ download_github author repo ".*\.deb" pre-release
 ## 6. Orchestration
 - `update.sh` (racine) exécute les scripts `10-*` à `89-*` dans l'ordre, avec `set -e` (arrêt à la première erreur).
 - Lancement automatique global : **crontab ou script racine** à préciser (cadence, dépendances, gestion des échecs, idempotence).
+- **`.github/workflows/packages.yml`** (workflow GitHub Actions, iter 1) :
+  - `workflow_dispatch` (manuel) → `runs-on: debian-13`.
+  - Étapes : checkout → `apt-get install jq` → boucle `10-*` à `89-*` (chacun `source`e `99-functions.sh`) → `src/91-update-repo-github.sh` (`continue-on-error: true`) → `peaceiris/actions-gh-pages@v3` déploie `./docs` sur `shionn.github.io/Debian-Orphanage` (branch `master`).
+  - `91` ne pousse PAS : son `git push` (anciennement L40-45) est commenté — le workflow déploie `docs/` en une fois (pas de double push).
+  - `build/` est dans `.gitignore` → le workflow ne committe que `docs/`.
+  - ⚠️ Sans le secret `GPG_PRIVATE_KEY`, `91` échoue à signer (SignWith: yes) → `continue-on-error` → `docs/` déployé mais **sans keyring GitHub** → repo GitHub a des `.deb` signés mais **pas installable via apt** (le keyring GitHub = `01-keyring-github.sh` → `92-update-repo-github-keyring.sh` n'est PAS dans ce workflow).
 
 ## 7. Signature GPG (export)
 - **Une seule clé** : ta clé GPG personnelle (actuellement ed25519, `sec` + sous-clé `ssb` cv25519).
