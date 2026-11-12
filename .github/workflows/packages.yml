@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: debian-13
+    runs-on: ubuntu
     steps:
       - uses: actions/checkout@v4
 
