@@ -6,6 +6,7 @@ rm -Rf build/trixie/recomp-launcher/
 mkdir -p build/trixie/recomp-launcher/
 cd build/trixie/recomp-launcher/
 
+project="recomp-launcher"
 
 curl -LJO "https://recomplauncher.com/api/launcher-beta.php?a=download&os=deb"
 #   RecompLauncher_0.90.0-beta.41_amd64.deb  ->  version=0.90.0, revision=beta.41
@@ -18,20 +19,20 @@ verrev="${rest%_*}"           # 0.90.0-beta.41
 version="${verrev%%-*}"       # 0.90.0
 revision="${verrev#*-}"       # beta.41
 
-dpkg-deb -R ${debname}.deb ${name}-${version}
+dpkg-deb -R ${debname}.deb ${project}-${version}
 rm ${debname}.deb
-cd ${name}-${version}
+cd ${project}-${version}
 rm DEBIAN/*
 
-echo "Source: ${name}
+echo "Source: ${project}
 Section: games
 Priority: optional
 Maintainer: Ripalda
 Homepage: https://recomplauncher.com
-Package: recomp-launcher
+Package: ${project}
 Version: ${version}-${revision}
 Architecture: amd64
-Depends: libwebkit2gtk-4.1-0, libgtk-3-0, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0, libayatana-appindicator3-1
 Description: Recompiled and decompiled PC games
  RecompLauncher finds, installs, updates and starts recompiled and decompiled PC games, straight from each developer's own GitHub. No game files are included: every game needs your own copy." >> DEBIAN/control
 
@@ -43,4 +44,4 @@ Copyright:
 Licence: GNU GPL V3" >> DEBIAN/copyright
 
 cd ..
-dpkg -b ${name}-${version}
+dpkg -b ${project}-${version}
