@@ -18,8 +18,6 @@ verrev="${rest%_*}"           # 0.90.0-beta.41
 version="${verrev%%-*}"       # 0.90.0
 revision="${verrev#*-}"       # beta.41
 
-echo "$"
-
 dpkg-deb -R ${debname}.deb ${name}-${version}
 rm ${debname}.deb
 cd ${name}-${version}
