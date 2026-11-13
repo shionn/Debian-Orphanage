@@ -10,7 +10,7 @@
 - **Hôte du dépôt :** `orphanage.shionn.org` (repo **local**, seul dépôt concerné)
 - **Signature GPG :** oui — les `.deb` sont signés (`SignWith: yes`)
 - **Objectif :** rassembler les paquets Debian tiers **orphelins** (aucun repo, aucun extrepo) + des projets packagés personnellement par shionn.
-- **Sources des paquets :** releases d'un repo GitHub (via l'API GitHub), sauf exceptions (ex. `16-recomp-launcher` via curl direct).
+- **Sources des paquets :** releases d'un repo GitHub (via l'API GitHub), sauf exceptions (ex. `16-recomp-launcher` / `19-discord` via curl direct).
 
 ## 2. Environnement d'exécution
 - Un **container Debian** Proxmox nommé **`Orphanage`**.
@@ -21,24 +21,13 @@
 |---|---|
 | `src/` | Scripts ordonnés par préfixe numérique |
 | `build/trixie/<pkg>/` | `.deb` téléchargés par chaque script packageur (sous-dossier par package) |
+| `build/trixie/keyring/` | **keyring unifié** `orphanage-keyring` (posé par `01-keyring.sh`) |
 | `build/` | Dossier racine du travail (scripts packageurs y déposent `trixie/<pkg>/`) |
 | `/var/www/html/` | **Config root + webroot de reprepro** (`-b /var/www/html`, `conf/distributions`, `pool/` servi) |
 | `/var/www/html/pool/` | Pool exporté, servi par lighttpd/webroot |
-| `temp/` | Ancienne zone tampon du keyring (plus utilisée) |
+| `www/` | Ancienne zone tampon (créée par `00-init.sh`) |
 | `agent/reference.md` | Ce fichier |
-| `update.sh` | Exécute tous les scripts de packages (10–89) dans l'ordre |
-| `README.md` | Notice courte |
-| Chemin | Rôle |
-|---|---|
-| `src/` | Scripts ordonnés par préfixe numérique |
-| `reprepro/` | Config + pool du dépôt local (`orphanage.shionn.org`) |
-| `build/trixie/<pkg>/` | `.deb` téléchargés par chaque script packageur (sous-dossier par package) |
-| `build/` | Dossier racine du travail (déposé par les scripts packageurs, lu par `90-update-repo.sh` à 2 niveaux : `build/trixie-*/*/*.deb` + `build/experimental/*/*.deb`) |
-| `build/experimental/` | `.deb` expérimentaux (cf. `90-update-repo.sh`) |
-| `temp/` | Ancienne zone tampon du keyring (plus utilisée) |
-| `www/` | Export du dépôt `reprepro`, servi via `http://orphanage.shionn.org/` |
-| `agent/reference.md` | Ce fichier |
-| `update.sh` | Exécute tous les scripts de packages (10–89) dans l'ordre |
+| `update.sh` | Exécute les scripts de packages (10–89) dans l'ordre |
 | `README.md` | Notice courte |
 
 ### Convention de noms de scripts (ordre d'exécution par index)
@@ -50,7 +39,7 @@
 | `99-functions.sh` | **Bibliothèque de fonctions** réutilisables — **`source`**e, pas exécutée dans l'ordre | toujours avant usage |
 | `update.sh` (racine) | Lance les scripts `10-*` à `89-*` dans l'ordre | après ajout d'un nouveau package |
 
-> ⚠️ **Tension de convention :** `99-functions.sh` porte un préfixe numérique mais est une **librairie à `source`**, pas un script ordonné. Les scripts qui l'utilisent doivent faire `source "src/99-functions.sh"` (idéalement en tête de fichier).
+> ⚠️ **`99-functions.sh`** porte un préfixe numérique mais est une **librairie à `source`**, pas un script ordonné. Les scripts qui l'utilisent doivent faire `source "src/99-functions.sh"` (idéalement en tête de fichier).
 
 ## 4. Workflow de reconstruction
 Exécuter les scripts `src/` dans l'ordre croissant de leur index :
@@ -58,22 +47,29 @@ Exécuter les scripts `src/` dans l'ordre croissant de leur index :
 ```
 ./src/00-init.sh            # setup (une fois)
 source ./src/99-functions.sh
-./src/01-keyring-local.sh <URI>      # fingerprint auto (clé secrète GPG), URI obligatoire
-./src/01-keyring-github.sh         # idem
+./src/01-keyring.sh "http://orphanage.shionn.org"   # keyring unifié (fingerprint auto + URI obligatoire)
 ./src/NN-pkg.sh             # un par package (10–89)
-./src/90-update-repo.sh     # rebuild du dépôt
+./src/90-update-repo.sh "orphanage.shionn.org" "/var/www/html"   # rebuild du dépôt local
 ```
 
 Ou, pour tout le lot de packages, depuis la racine :
 ```bash
 bash update.sh              # exécute src/10-* à src/89-* dans l'ordre (set -e : arrêt à la 1ère erreur)
 ```
+- `update.sh` appelle en tête `bash "src/01-keyring.sh" "http://orphanage.shionn.org"`, puis, à la fin, `bash "src/90-update-repo.sh" "orphanage.shionn.org" "/var/www/html"`.
 - **`90-update-repo.sh`** :
-  - Écrit `conf/distributions` à **`/var/www/html/conf/distributions`** (Origin/Label `orphanage.shionn.org`, Codenames `trixie` + `experimental`, Composant `main`, Arch `amd64`, `SignWith: yes`).
-  - `reprepro -b /var/www/html includedeb trixie build/trixie/*/*.deb` → inclut tous les `.deb` à deux niveaux (`build/trixie/<pkg>/<fichier>.deb`) — correspond au dépôtage des scripts packageurs.
-  - `reprepro -b /var/www/html includedeb experimental build/experimental/*/*.deb` → experimental (matches rien tant qu'aucun package n'y est déposé).
-  - `reprepro -b /var/www/html export trixie` / `export experimental` → exporte le pool vers `/var/www/html/pool/` (servi par lighttpd/webroot).
-  - Le script doit être exécuté depuis la **racine du projet** (`/root/Orphanage`) pour que `build/trixie/*/*.deb` se résolve.
+  - **2 paramètres obligatoires** : `$1` = origin/URL (`orphanage.shionn.org`), `$2` = config root / destination (`/var/www/html`). Sinon → `Usage : $0 <origin-url> <config-root>` + `exit 1`.
+  - Écrit `conf/distributions` à `${CONFIG_ROOT}/conf/distributions` (Origin/Label = `$1`, Codenames `trixie` + `experimental`, Composant `main`, Arch `amd64`, `SignWith: yes`).
+  - `includedeb` à 2 niveaux : `reprepro -b "${CONFIG_ROOT}" includedeb trixie build/trixie/*/*.deb` (récupère les packages ET le keyring unifié dans `build/trixie/keyring/`), et `includedeb experimental build/experimental/*/*.deb`.
+  - `reprepro -b "${CONFIG_ROOT}" export trixie` / `export experimental` → exporte le pool vers `${CONFIG_ROOT}/pool/`.
+  - Doit être exécuté depuis la **racine du projet** pour que `build/trixie/*/*.deb` se résolve.
+- **`91-update-repo-github.sh`** :
+  - Régénère `docs/conf/distributions` (Origin/Label `shionn.github.io/Debian-Orphanage`, codenames `trixie` + `experimental`).
+  - `reprepro -b docs includedeb trixie build/trixie/*/*.deb` (inclut **aussi** le keyring unifié) puis export trixie/experimental.
+  - Exécuté manuellement sur le serveur (pas dans le workflow).
+- **`92-update-repo-github-keyring.sh`** : **OBSOLÈTE** — référence l'ancien chemin `build/trixie-github/*/*.deb` (supprimé par l'unification). Ne plus utiliser.
+- **`01-keyring-local.sh`** / **`01-keyring-github.sh`** : **OBSOLÈTES** — remplacés par `01-keyring.sh` (plus appelés par `update.sh`). Garder ou supprimer à la discrétion.
+
 ### Obtenir le fingerprint GPG
 Le fingerprint est récupéré **automatiquement** depuis la clé secrète GPG — plus besoin de le passer en paramètre :
 ```bash
@@ -81,76 +77,47 @@ sign=$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {prin
 ```
 → `--with-colons` (format colon) + `awk -F: '/^fpr:/' {print $10; exit}` prend le **premier** `fpr:` = empreinte hexa de la clé principale (~40 caractères). Si vide → erreur + `exit 1`.
 
-```bash
-sign=$(gpg --list-secret-keys --with-colons 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
-```
-→ `--with-colons` (format colon) + `awk -F: '/^fpr:/' {print $10; exit}` prend le **premier** `fpr:` = empreinte hexa de la clé principale (~40 caractères). Si vide → erreur + `exit 1`.
-
 ### Rôle de chaque script (état actuel)
 - **`00-init.sh`** :
-  - Installe `reprepro` et `lighttpd` (serveur web du dépôt).
-- **`01-keyring-local.sh`** (et `01-keyring-github.sh`, mêmes mécanismes, version `1.0.4`) :
-  - Le **fingerprint** GPG est récupéré **automatiquement** depuis la clé secrète (`gpg --list-secret-keys --with-colons | awk ...`) — plus de paramètre requis ; sinon erreur + `exit 1`.
-  - **`01-keyring-local.sh`** : l'URI est un **paramètre obligatoire** (`$1`) qui définit le dépôt vers lequel pointer le keyring ; sinon erreur + usage + `exit 1`.
-  - **`01-keyring-github.sh`** : l'URI reste **en dur** (`https://shionn.github.io/Debian-Orphanage`) — aucun paramètre.
+  - Installe `reprepro`, `lighttpd`, `curl`, `jq` (`apt install ...` — typo déjà corrigée).
+  - `mkdir -p www` ; génère la clé GPG une fois (`gpg --generate-key`).
+- **`01-keyring.sh`** (keyring **unifié**, version `1.0.4`) :
+  - Fingerprint GPG récupéré **automatiquement** depuis la clé secrète (`gpg --list-secret-keys --with-colons | awk ...`) — plus de paramètre requis ; sinon erreur + `exit 1`.
+  - **URI obligatoire** en paramètre `$1` : définit le dépôt vers lequel pointer le keyring ; sinon erreur + usage + `exit 1`.
   - Construit le paquet `orphanage-keyring` (version `1.0.4`).
   - `DEBIAN/control` : `misc / optional / all`.
-  - Installe la clé sous `/usr/share/keyrings/orphanage.<project>.pgp` (via `gpg --export-options export-minimal`).
-  - Crée l'entry apt au **format `.sources`** : `etc/apt/sources.list.d/orphanage.<project>.sources` (`Types: deb`, `URIs:`, `Suites: trixie`, `Components: main`, `Signed-By:`).
-  - Sortie : le `.deb` est déposé dans **`build/trixie-local/keyring/`** (local) ou **`build/trixie-github/keyring/`** (GitHub).
+  - Exporte la clé publique minimale (`gpg --export-options export-minimal`) sous `usr/share/keyrings/orphanage.pgp`.
+  - Crée l'entry apt au **format `.sources`** : `etc/apt/sources.list.d/orphanage.sources` (`Types: deb`, `URIs: $1`, `Suites: trixie`, `Components: main`, `Signed-By: /usr/share/keyrings/orphanage.pgp`).
+  - **Sortie :** le `.deb` est déposé dans **`build/trixie/keyring/`** (lieu unique, servi par `90` ET `91`).
+- **`01-keyring-local.sh`** / **`01-keyring-github.sh`** : **OBSOLÈTES** — remplacés par `01-keyring.sh`.
 - **`90-update-repo.sh`** :
-  - Écrit `conf/distributions` à `/var/www/html/conf/distributions` (Origin/Label `orphanage.shionn.org`, Codenames `trixie` + `experimental`, Composant `main`, Arch `amd64`, `SignWith: yes`).
-  - `includedeb` à 2 niveaux : `reprepro -b /var/www/html includedeb trixie build/trixie-local/*/*.deb` puis `build/trixie/*/*.deb` (récupère les packages ET le keyring-local), et `includedeb experimental build/experimental/*/*.deb`.
-  - `reprepro -b /var/www/html export trixie` / `export experimental` → exporte le pool vers `/var/www/html/pool/` (servi par lighttpd/webroot).
-  - Doit être exécuté depuis la **racine du projet** (`/root/Orphanage`) pour que `build/trixie/*/*.deb` se résolve.
-  - Les anciennes lignes `mv temp/*`/`build/trixie/` sont **commentées** — ne pas les activer sans raison.
+  - 2 paramètres obligatoires (`$1` origin, `$2` config root) ; usage + `exit 1` sinon.
+  - `includedeb` à 2 niveaux (packages + keyring unifié) + export → pool servi par `/var/www/html/pool/`.
+  - Doit être exécuté depuis la **racine du projet**.
 - **`91-update-repo-github.sh`** :
   - Régénère `docs/conf/distributions` (Origin/Label `shionn.github.io/Debian-Orphanage`, codenames `trixie` + `experimental`).
-  - `reprepro -b docs includedeb trixie build/trixie-github/*/*.deb` (keyring GitHub) puis export trixie/experimental.
-- **`92-update-repo-github-keyring.sh`** :
-  - Régénère `docs/conf/distributions`, puis `includedeb trixie build/trixie/*/*.deb` + export, suivi d'un `git push` vers le dépôt GitHub.
+  - `includedeb trixie build/trixie/*/*.deb` (inclut **aussi** le keyring unifié) + export.
+  - Exécuté manuellement sur le serveur (pas dans le workflow).
+- **`92-update-repo-github-keyring.sh`** : **OBSOLÈTE** — ancien chemin `build/trixie-github/*/*.deb`.
+- **`update.sh`** (racine) exécute les scripts `10-*` à `89-*` dans l'ordre :
+  - Extraction du préfixe corrigée : `basename="${script##*/}"` puis `prefix="${basename%%[!0-9]*}"` (sinon `src/` donne une chaîne vide → aucun script traité).
+  - Gestion d'erreur robuste : `if ! bash "$script"` → un échec de package ne tue pas la boucle (avertissement en stderr).
+  - Appel en tête du keyring unifié +, à la fin, publication du repo local (`90`).
 
-### Fonction réutilisable : `download_github` (`99-functions.sh`)
-Télécharge les assets d'une **release** d'un repo GitHub.
-```bash
-download_github <author> <repo> [pattern]   # pattern : regex ERE, défaut : .*\.deb
-```
-- Récupère la release la plus récente via `https://api.github.com/repos/<author>/<repo>/releases/latest`.
-- Lit les `browser_download_url` des assets (nécessite **`jq`**).
-- **`pattern` est une regex ERE** (match `[[ =~ ]]`) : seuls les noms de fichier correspondants sont téléchargés, le reste est ignoré.
-- **`--exclude` supprimé** (le regex positif exprime directement ce qu'on garde).
-- Télécharge dans le **dossier courant** sous le nom du fichier (`basename` de l'URL).
-- Dépendances : `curl`, `jq`.
-
-Exemple validé par shionn (umu : garde le `.deb` amd64, exclut implicitement `debian-12`/`arm64`/`ubuntu`/`.rpm`/`.tar`) :
-```bash
-download_github umu umu-core "^umu-.*_[0-9][^_]*_amd64\.deb$"
-```
-
-### Packages actuels (10–16)
-Chaque script fait `mkdir -p build/trixie/<pkg>/` puis `cd` dedans, puis `download_github`.
 ### Fonction réutilisable : `download_github` (`99-functions.sh`)
 Télécharge les assets d'une **release** d'un repo GitHub.
 ```bash
 download_github <author> <repo> [pattern] [release|pre-release]   # pattern : regex ERE, défaut : .*\.deb
 ```
 - Récupère la release la plus récente via `https://api.github.com/repos/<author>/<repo>/releases/latest`.
-- **`pattern`** : regex ERE (`[[ =~ ]]`) — seuls les noms de fichier correspondants sont téléchargés.
-- **4e argument** : `release` (défaut, stable) ou `pre-release` → ajoute `?pre=1` à l'API pour inclure les prereleases.
-- **`--exclude` supprimé** (le regex positif exprime directement ce qu'on garde).
-- Télécharge dans le **dossier courant** sous le nom du fichier (`basename` de l'URL).
+- Lit les `browser_download_url` des assets (nécessite **`jq`**).
+- **`pattern`** est une regex ERE (`[[ =~ ]]`) — seuls les noms de fichier correspondants sont téléchargés.
+- Télécharge dans le **dossier courant** sous le nom du fichier.
 - Dépendances : `curl`, `jq`.
-
-Exemple validé par shionn (umu : garde le `.deb` amd64, exclut implicitement `debian-12`/`arm64`/`ubuntu`/`.rpm`/`.tar`) :
-```bash
-download_github umu umu-core "^umu-.*_[0-9][^_]*_amd64\.deb$"
-Exemple avec prereleases :
-```bash
-download_github author repo ".*\.deb" pre-release
-```
+- ⚠️ Utilise encore `exit 1` sur erreur (fonctionnel via `update.sh` (`if !`), mais devrait être `return 1`).
 
 ### Fonction réutilisable : `github_get_last_release_tag` (`99-functions.sh`)
-Récupère le **tag_name** de la dernière release (pour cloner/git).
+Récupère le **tag_name** de la dernière release (pour cloner/git sur un tag précis).
 ```bash
 TAG=$(github_get_last_release_tag <author> <repo>)   # retourne le tag, 0=OK / 1=erreur
 ```
@@ -169,29 +136,29 @@ download_github_last_tag <author> <repo> <pattern-fichier> <pattern-tag>
 - **`return 1` / `return 0`** (ne tue pas le script appelant) ; message « Aucune release ... » si aucun tag ne correspond.
 - Exemple : `download_github_last_tag GloriousEggroll proton-ge-custom '.*\.tar\.gz' 'GE-Proton9-.*'` puis `version="${LAST_GITHUB_TAG}"`.
 
-
-> ⚠️ **`download_github`** utilise encore `exit 1` sur erreur (ligne 31) — ça marche via `update.sh` (`if ! bash "$script"`), mais devrait être `return 1` pour être portable.
-Exemple avec prereleases :
-```bash
-download_github author repo ".*\.deb" pre-release
-```
+### Packages actuels (10–20)
+| `NN-script.sh` | Package | Source | Pattern / remarque |
 |---|---|---|---|
 | `10-umu.sh` | umu-launcher | GitHub `Open-Wine-Components/umu-launcher` | `.*(amd64\|all)_debian-13.deb` (amd64 + all) |
 | `11-openrgb.sh` | openrgb | GitHub `CalcProgrammer1/OpenRGB` | `.*amd64_trixie_.*.deb` |
-| `16-recomp-launcher.sh` | recomp-launcher | **curl direct** `recomplauncher.com/api/launcher-beta.php?a=download&os=deb` | — (hors `download_github`, `99-functions.sh` commenté) |
-| `17-freetube.sh` | freetube | à confirmer | — |
-| `18-hyprshot.sh` | hyprshot | `git clone -b $tag` GitHub + `dpkg -b` (build complet d'un DEB) | utilise `github_get_last_release_tag` |
+| `12-bc250.sh` | bc250-control-center | GitHub `movacx/bc250-control-center` | `.*.deb` (tout) |
 | `13-hydra-launcher.sh` | hydra | GitHub `hydralauncher/hydra` | `.*.deb` (tout) |
 | `14-heroic-games-launcher.sh` | heroic-games-launcher | GitHub `Heroic-Games-Launcher/HeroicGamesLauncher` | `.*amd64.deb` |
 | `15-faugus-launcher.sh` | faugus-launcher | GitHub `Faugus/faugus-launcher` | `.*.deb` (tout) |
-| `16-recomp-launcher.sh` | recomp-launcher | **curl direct** `recomplauncher.com/api/launcher-beta.php?a=download&os=deb` | — (hors `download_github`, `99-functions.sh` commenté) |
+| `16-recomp-launcher.sh` | recomp-launcher | **curl direct** `recomplauncher.com/api/launcher-beta.php?a=download&os=deb` | hors `download_github` (exception) |
+| `17-freetube.sh` | freetube | GitHub `FreeTubeApp/FreeTube` | `.*amd64.deb` **prerelease** |
+| `18-hyprshot.sh` | hyprshot | `git clone -b $tag` GitHub + `dpkg -b` | `github_get_last_release_tag` |
+| `19-discord.sh` | discord | **curl direct** `discord.com/api/downloads/.../installers/latest?...&format=deb` | hors `download_github` (exception) |
+| `20-proton.sh` | proton (GE) | **copier-coller cassé de `18-hyprshot.sh`** | télécharge `proton-ge-custom` mais `git clone Gustash/Hyprshot` (à corriger) |
 
-> **`16-recomp-launcher.sh`** ne suit pas le modèle : pas de `download_github`, source externe (`recomplauncher.com`). À aligner si possible, ou documenter comme exception.
+- Les scripts simples (10–17) : `source "src/99-functions.sh"` → `mkdir -p build/trixie/<pkg>/` → `cd` → `download_github <author> <repo> "<pattern>"`.
+- `18-hyprshot.sh` / `20-proton.sh` : build complet d'un `.deb` (`git clone` + `dpkg -b`) ; `exit 0` sur « a jour », `exit 1` sur vraie erreur.
 - **`update.sh`** (racine) exécute les scripts `10-*` à `89-*` dans l'ordre :
   - Extraction du préfixe corrigée : `basename="${script##*/}"` puis `prefix="${basename%%[!0-9]*}"` (sinon `src/` donne une chaîne vide → aucun script traité).
   - Gestion d'erreur robuste : `if ! bash "$script"` → un échec de package ne tue pas la boucle (avertissement en stderr).
   - À la fin : `bash "src/90-update-repo.sh"` (publication du repo).
   - `set -e` présent — un échec direct (hors `if !`) arrête tout.
+
 ## 5. Flux d'un nouveau paquet
 1. Récupérer/construire le paquet orphelin → produire un `.deb`, ex. via `download_github`.
 2. Faire traiter le paquet par son script dédié (`NN-pkg.sh`, 10–89), qui dépose le `.deb` dans `build/trixie/<pkg>/`.
@@ -206,17 +173,14 @@ download_github author repo ".*\.deb" pre-release
   - `runs-on: ubuntu-latest` (GitHub-hosted suffit — **pas de self-hosted debian-13**).
   - `permissions` : `contents: read`, `pages: write`, `id-token: write` ; `environment: github-pages`.
   - Étapes : checkout → `apt-get install jq reprepro` → boucle `10-*` à `89-*` (chacun `source`e `99-functions.sh`, **fix prefix : `basename="${script##*/}"` puis `prefix="${basename%%[!0-9]*}"` sinon le glob `src/*.sh` ne matche rien → 0s) → step `Importer la clé GPG` → `src/91-update-repo-github.sh` (`continue-on-error: true`) → `actions/deploy-pages@v4` déploie `./docs` (via API Pages, **AUCUN push git**).
-  - `91` ne pousse PAS : son `git push` (anciennement L40-45) est commenté.
+  - `91` ne pousse PAS : son `git push` est commenté.
   - `build/` est dans `.gitignore` → le workflow ne committe que `docs/`.
   - **Bloc `env:`** dans le step import : `KEY: ${{ secrets.GPG_PRIVATE_KEY }}` → `echo "$KEY" | tr -d '[:space:]' | base64 -d | gpg --import`.
-  - ⚠️ Sans le secret `GPG_PRIVATE_KEY`, `91` échoue à signer (SignWith: yes) → `continue-on-error` → `docs/` déployé mais **sans keyring GitHub** → repo GitHub a des `.deb` signés mais **pas installable via apt** (le keyring GitHub = `01-keyring-github.sh` → `92-update-repo-github-keyring.sh` n'est PAS dans ce workflow).
+  - ⚠️ Sans le secret `GPG_PRIVATE_KEY`, `91` échoue à signer (SignWith: yes) → `continue-on-error` → `docs/` déployé mais **sans keyring GitHub** → repo GitHub a des `.deb` signés mais **pas installable via apt**. Le keyring unifié (`01-keyring.sh`) est partagé par `90` ET `91` (inclus via `build/trixie/*/*.deb`) ; l'ajouter dans le workflow rendrait le repo GitHub installable.
 
 ## 7. Signature GPG (export)
 - **Une seule clé** : ta clé GPG personnelle (actuellement ed25519, `sec` + sous-clé `ssb` cv25519).
 - **reprepro** signe les `.deb` + `Release` avec **ta clé secrète**.
-- **`download_github`** : `exit 1` sur erreur (ligne 31) — fonctionnel via `update.sh` (`if !`), mais devrait être `return 1`.
-- **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
-- **`18-hyprshot.sh`** : `exit 1` sur vraie erreur (ligne 12) — OK (vrai échec), mais `exit 0` sur « a jour » (ligne 18).
 - **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
 - **README.md** : très court, à enrichir (installation, contribution).
 - La clé privée vit dans `~/.gnupg` (locale, **hors git**) ; les scripts ne contiennent qu'un identifiant (`SignKey:`).
@@ -226,14 +190,14 @@ download_github author repo ".*\.deb" pre-release
 ## 8. Outils utilisés
 - `reprepro` — construction/export du dépôt Debian.
 - `lighttpd` — serveur web du dépôt (`www/`).
-| Package keyring | `orphanage-keyring` v`1.0.4` |
 - `gpg` — export de la clé de signature.
-- `curl`, `jq` — téléchargement des paquets depuis GitHub (fonction `download_github`).
+- `curl`, `jq` — téléchargement des paquets depuis GitHub (fonctions `99-functions.sh`).
 
 ## 9. Valeurs clés / constantes
 | Élément | Valeur |
 |---|---|
-| Origin / Label | `orphanage.shionn.org` |
+| Origin / Label (local) | `orphanage.shionn.org` |
+| Origin / Label (GitHub) | `shionn.github.io/Debian-Orphanage` |
 | Codenames | `trixie` (stable), `experimental` |
 | Composant | `main` |
 | Architecture | `amd64` |
@@ -242,23 +206,16 @@ download_github author repo ".*\.deb" pre-release
 | Chemin d'installation | `/root/Orphanage` (container Debian) |
 
 ## 10. Questions ouvertes / TODO
-- **`16-recomp-launcher.sh`** : hors modèle (`curl` direct, source externe) — aligner ou documenter comme exception.
+- **`20-proton.sh`** : copier-coller cassé de `18-hyprshot.sh` (télécharge `proton-ge-custom` mais `git clone Gustash/Hyprshot`) — à réparer ou supprimer.
+- **`92-update-repo-github-keyring.sh`** : obsolète (ancien chemin `build/trixie-github/*/*.deb`) — supprimer ou réutiliser.
+- **`01-keyring-local.sh` / `01-keyring-github.sh`** : obsolètes (remplacés par `01-keyring.sh`) — supprimer pour éviter la confusion.
+- **`16-recomp-launcher.sh` / `19-discord.sh`** : hors modèle (`curl` direct, source externe) — aligner ou documenter comme exception.
 - **`99-functions.sh`** : convention « ordre d'exécution » vs « librairie à `source` » — à clarifier.
-- **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
+- **`download_github`** : `exit 1` sur erreur (ligne 31) — devrait être `return 1` pour être portable.
+- **`00-init.sh`** : `mkdir -p www` (zone tampon obsolète) — à supprimer si plus utilisée.
 - **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
 - **README.md** : très court, à enrichir (installation, contribution).
-- **Keyring GitHub** : le workflow ne contient PAS `01-keyring-github.sh`/`92` → le repo GitHub a des `.deb` signés mais **sans keyring** = pas installable via apt. Ajouter le keyring GitHub pour rendre le repo installable.
+- **Keyring GitHub** : le workflow ne contient PAS `01-keyring.sh`/`91` → le repo GitHub a des `.deb` signés mais **sans keyring** = pas installable via apt. Ajouter le keyring unifié dans le workflow pour rendre le repo installable.
 - **Config root / webroot :** reprepro utilise `-b /var/www/html` et écrit `conf/distributions` à `/var/www/html/conf/`. Le pool exporté est servi depuis `/var/www/html/pool/`. Vérifier que lighttpd/webroot sert bien `/var/www/html/` et que l'URI apt (`orphanage.shionn.org/`) pointe vers ce pool.
 - **Experimental :** `includedeb experimental build/experimental/*/*.deb` ne matche rien tant qu'aucun package n'est déposé dans `build/experimental/`. Décider si un package peut aller en experimental (et comment).
-- **`16-recomp-launcher.sh`** : hors modèle (`curl` direct, source externe) — aligner ou documenter comme exception.
-- **`99-functions.sh`** : convention « ordre d'exécution » vs « librairie à `source` » — à clarifier.
-- **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
-- **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
-- **README.md** : très court, à enrichir (installation, contribution).
-
 - **Orchestration :** crontab vs script racine — à choisir et documenter.
-- **`16-recomp-launcher.sh`** : hors modèle (`curl` direct, source externe) — aligner ou documenter comme exception.
-- **`99-functions.sh`** : convention « ordre d'exécution » vs « librairie à `source` » — à clarifier.
-- **`00-init.sh`** : `apt instal` (typo) à corriger en `apt install`.
-- **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
-- **README.md** : très court, à enrichir (installation, contribution).
