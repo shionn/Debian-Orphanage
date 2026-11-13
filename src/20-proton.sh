@@ -2,7 +2,7 @@
 
 source "src/99-functions.sh"
 
-project="proton-9"
+project="ge-proton-9"
 revision=0
 
 mkdir -p build/trixie/${project}/
@@ -17,21 +17,20 @@ fi
 
 version=$(echo "${LAST_GITHUB_TAG}" | sed -E 's/.*-(.+)-(.+)$/\1.\2/')
 
-echo "Version : ${version}"
-
-exit 0
-
-if [ -f "$project-$version-$revision.deb" ]; then
+if [ -f "$project-$version.deb" ]; then
 	echo "a jour $version"
 	# deja la = OK, pas d'erreur
 	exit 0
 fi
 
-git clone -b $version git@github.com:Gustash/Hyprshot.git ${version}
-cd "${version}/"
+mkdir ${version}
+tar -xzf GE-Proton9-${version}.tar.gz -C ${version}
+cd ${version}
 
 mkdir ${project}-${version}
 cd ${project}-${version}
+
+exit 0
 
 # a mettre dans /lib/proton/proton-x/
 # faire les liens symbolique dans /usr/bin ? a voir car plusieur version de proton
@@ -43,22 +42,22 @@ cp ../hyprshot usr/local/bin/
 mkdir DEBIAN
 
 echo "Source: ${project}
-Section: graphics
+Section: games
 Priority: optional
 Maintainer: Shionn<shionn@gmail.com>
-Homepage: https://github.com/Gustash/Hyprshot
+Homepage: https://github.com/GloriousEggroll/proton-ge-custom
 Package: ${project}
 Version: ${version}
 Architecture: amd64
-Depends: hyprland, slurp, grim, libnotify-bin, wl-clipboard, jq
-Description: Hyprshot is an utility to easily take screenshot in Hyprland using your mouse.">> DEBIAN/control
+Depends: 
+Description: This is my build of Proton with the most recent bleeding-edge Proton Experimental Wine.">> DEBIAN/control
 
 echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ${project}
-Source: https://github.com/Gustash/Hyprshot/tree/${version}
+Source: https://github.com/GloriousEggroll/proton-ge-custom/tree/GE-Proton9-${version}
 Files: *
-Copyright: 
-Licence: GNU GPL V3" >> DEBIAN/copyright
+Copyright: Valve Corporation
+Licence: https://github.com/GloriousEggroll/proton-ge-custom/blob/master/LICENSE.proton" >> DEBIAN/copyright
 
 cd .. 
 dpkg -b ${project}-${version}
