@@ -55,6 +55,90 @@ download_github() {
 		fi
 	done <<< "${DOWNLOAD_URLS}"
 }
+# download_codeberg : telecharge les assets d'une release d'un repo Codeberg
+# (Gitea) SANS aucune authentification OAuth.
+#
+#   download_codeberg <owner> <repo> [pattern]
+#
+#   pattern    : regex ERE sur le nom de fichier (partie asset). Seuls les
+#            fichiers correspondants sont telecharges (le reste est ignore).
+#   release    : la derniere release stable (defaut, isolation native).
+#
+# Codeberg tourne sur Gitea : l'API Gitea exige un token OAuth (evite). On
+# utilise le URL de telechargement direct des assets de release et on scrape
+# la page des releases pour decouvrir la derniere release + ses assets.
+#
+# CSS cible : #release-list > li:first-child details ul a  (1ere release =
+# li:first-child, isolation native ; Gitea liste par ordre decreissant).
+#
+# Récupère la page des releases, isole la derniere release, filtre ses assets
+# par regex, puis telecharge dans le dossier courant.
+# dependances : curl, grep, sed
+download_codeberg() {
+	local owner="$1"
+	local repo="$2"
+	local pattern="${3:-'.*\.deb'}"
+
+	PAGES_URL="https://codeberg.org/${owner}/${repo}/releases"
+	PAGE_HTML=$(curl -s --connect-timeout 10 --max-time 120 "${PAGES_URL}")
+	if [ $? -ne 0 ]; then
+		echo "Erreur lors de la recuperation de la page des releases."
+		return 1
+	fi
+
+	# Isolation de la derniere (1ere) release : chaque release = un bloc
+	# <details class="download">, en ordre croissant. On isole du 1er bloc
+	# jusqu'a l'ouverture du 2e (ou EOF), puis on lit les href des <a> de
+	# telechargement. On lit l'href (pas le texte) : le <a> contient un SVG
+	# enfant dont le markup brut serait inclus dans le texte brut.
+	OPENINGS=$(echo "${PAGE_HTML}" | grep -n 'details class="download"' | cut -d: -f1)
+	FIRST=$(echo "${OPENINGS}" | head -1)
+	if [ -z "${FIRST}" ]; then
+		echo "Aucun asset correspondant"
+		return 1
+	fi
+	NEXT=$(echo "${OPENINGS}" | sed -n '2p')
+	if [ -z "${NEXT}" ]; then
+		RANGE=$(echo "${PAGE_HTML}" | sed -n "${FIRST},\$p")
+	else
+		RANGE=$(echo "${PAGE_HTML}" | sed -n "${FIRST},$((NEXT-1))p")
+	fi
+
+	# Extraction des href des assets de telechargement (lire l'href, pas le texte)
+	DOWNLOAD_URLS=$(echo "${RANGE}" | grep -oE 'href="[^"]*releases/download/[^"]+"' | sed -E 's/href="//; s/"$//')
+
+	# Suivi : un asset a-t-il correspondu au pattern (telecharge ou deja present) ?
+	MATCHED=0
+	while IFS= read -r URL; do
+		if [ -z "${URL}" ]; then
+			continue
+		fi
+		FILENAME=$(basename "${URL}")
+
+		# Filtre regex (ERE) : ne garde que les fichiers correspondants.
+		if [[ "$FILENAME" =~ $pattern ]]; then
+			MATCHED=1
+			if [ -f "$FILENAME" ]; then
+				echo "a jour $FILENAME"
+			else
+				echo "Telechargement de ${FILENAME}"
+				curl -L --connect-timeout 10 --max-time 120 -o "${FILENAME}" "${URL}"
+				if [ $? -ne 0 ]; then
+					echo "Erreur lors du telechargement de ${FILENAME}."
+				fi
+			fi
+		else
+			echo "Ignoré : $FILENAME"
+		fi
+	done <<< "${DOWNLOAD_URLS}"
+	if [ "${MATCHED}" -eq 0 ]; then
+		echo "Aucun asset correspondant"
+		return 1
+	fi
+	return 0
+}
+
+
 
 
 

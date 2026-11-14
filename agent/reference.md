@@ -10,7 +10,7 @@
 - **Hôte du dépôt :** `orphanage.shionn.org` (repo **local**, seul dépôt concerné)
 - **Signature GPG :** oui — les `.deb` sont signés (`SignWith: yes`)
 - **Objectif :** rassembler les paquets Debian tiers **orphelins** (aucun repo, aucun extrepo) + des projets packagés personnellement par shionn.
-- **Sources des paquets :** releases d'un repo GitHub (via l'API GitHub), sauf exceptions (ex. `16-recomp-launcher` / `19-discord` via curl direct).
+- **Sources des paquets :** releases d'un repo GitHub (via l'API GitHub), ou Codeberg/Gitea (via `download_codeberg`, **sans auth OAuth**), sauf exceptions (ex. `16-recomp-launcher` / `19-discord` via curl direct).
 
 ## 2. Environnement d'exécution
 - Un **container Debian** Proxmox nommé **`Orphanage`**.
@@ -116,6 +116,22 @@ download_github <author> <repo> [pattern] [release|pre-release]   # pattern : re
 - Dépendances : `curl`, `jq`.
 - ⚠️ Utilise encore `exit 1` sur erreur (fonctionnel via `update.sh` (`if !`), mais devrait être `return 1`).
 
+### Fonction réutilisable : `download_codeberg` (`99-functions.sh`)
+Télécharge les assets d'une **dernière release stable** d'un repo **Codeberg** (Gitea) **sans aucune authentification OAuth**.
+```bash
+download_codeberg <owner> <repo> [pattern]   # pattern : regex ERE sur le nom de fichier (partie asset), défaut : .*\.deb
+```
+- Codeberg tourne sur Gitea : l'API Gitea exige un token OAuth (**évité**). On scrape la page des releases `https://codeberg.org/<owner>/<repo>/releases` et on utilise le URL de téléchargement direct des assets `.../releases/download/<tag>/<asset>` (`curl -L` suit le redirect).
+- **Isolation de la dernière release** : chaque release = un bloc `<details class="download">` (en ordre croissant) ; on isole du 1er bloc jusqu'à l'ouverture du 2e (ou EOF). CSS cible : `#release-list > li:first-child details ul a`.
+- **On lit l'`href`** (pas le texte) : chaque `<a>` contient un **SVG enfant** dont le markup brut serait inclus dans le texte brut. Le fichier est téléchargé sous le **`basename` de l'`href`** (= partie asset, dernière composante après `/releases/download/`).
+- **`pattern`** est une regex ERE (`[[ =~ ]]`, **pattern variable non cité** — sinon traité comme littéral). Seuls les noms de fichier correspondants sont téléchargés.
+- Télécharge dans le **dossier courant** sous le nom du fichier.
+- **`return 1`** sur erreur (échec récupération page / aucun asset correspondant / échec curl) — ne tue pas le script appelant (contrairement à `download_github` qui fait `exit 1`).
+- Idempotence : « a jour » si le fichier existe déjà ; aucun re-téléchargement.
+- Dépendances : `curl`, `grep`, `sed`.
+- Exemple : `21-libhidapi-hotplug.sh` → `download_codeberg OpenRGB hidapi-hotplug ".*trixie_amd64.deb"`.
+
+
 ### Fonction réutilisable : `github_get_last_release_tag` (`99-functions.sh`)
 Récupère le **tag_name** de la dernière release (pour cloner/git sur un tag précis).
 ```bash
@@ -136,7 +152,7 @@ download_github_last_tag <author> <repo> <pattern-fichier> <pattern-tag>
 - **`return 1` / `return 0`** (ne tue pas le script appelant) ; message « Aucune release ... » si aucun tag ne correspond.
 - Exemple : `download_github_last_tag GloriousEggroll proton-ge-custom '.*\.tar\.gz' 'GE-Proton9-.*'` puis `version="${LAST_GITHUB_TAG}"`.
 
-### Packages actuels (10–20)
+### Packages actuels (10–21)
 | `NN-script.sh` | Package | Source | Pattern / remarque |
 |---|---|---|---|
 | `10-umu.sh` | umu-launcher | GitHub `Open-Wine-Components/umu-launcher` | `.*(amd64\|all)_debian-13.deb` (amd64 + all) |
@@ -150,6 +166,7 @@ download_github_last_tag <author> <repo> <pattern-fichier> <pattern-tag>
 | `18-hyprshot.sh` | hyprshot | `git clone -b $tag` GitHub + `dpkg -b` | `github_get_last_release_tag` |
 | `19-discord.sh` | discord | **curl direct** `discord.com/api/downloads/.../installers/latest?...&format=deb` | hors `download_github` (exception) |
 | `20-proton.sh` | proton (GE) | **copier-coller cassé de `18-hyprshot.sh`** | télécharge `proton-ge-custom` mais `git clone Gustash/Hyprshot` (à corriger) |
+| `21-libhidapi-hotplug.sh` | libhidapi-hotplug | **Codeberg** `OpenRGB/hidapi-hotplug` (Gitea, **sans auth**) | `download_codeberg` `.*trixie_amd64.deb` (dernière release stable) |
 
 - Les scripts simples (10–17) : `source "src/99-functions.sh"` → `mkdir -p build/trixie/<pkg>/` → `cd` → `download_github <author> <repo> "<pattern>"`.
 - `18-hyprshot.sh` / `20-proton.sh` : build complet d'un `.deb` (`git clone` + `dpkg -b`) ; `exit 0` sur « a jour », `exit 1` sur vraie erreur.
@@ -191,7 +208,7 @@ download_github_last_tag <author> <repo> <pattern-fichier> <pattern-tag>
 - `reprepro` — construction/export du dépôt Debian.
 - `lighttpd` — serveur web du dépôt (`www/`).
 - `gpg` — export de la clé de signature.
-- `curl`, `jq` — téléchargement des paquets depuis GitHub (fonctions `99-functions.sh`).
+- `curl`, `jq`, `grep`, `sed` — téléchargement des paquets depuis GitHub (via `download_github`) ou Codeberg/Gitea (via `download_codeberg`, scraping sans API).
 
 ## 9. Valeurs clés / constantes
 | Élément | Valeur |
@@ -212,6 +229,7 @@ download_github_last_tag <author> <repo> <pattern-fichier> <pattern-tag>
 - **`16-recomp-launcher.sh` / `19-discord.sh`** : hors modèle (`curl` direct, source externe) — aligner ou documenter comme exception.
 - **`99-functions.sh`** : convention « ordre d'exécution » vs « librairie à `source` » — à clarifier.
 - **`download_github`** : `exit 1` sur erreur (ligne 31) — devrait être `return 1` pour être portable.
+- **`download_codeberg`** : l'isolation de la dernière release repose sur la présence d'un `<details class="download">` par release (1ʳᵉ = plus récente) + extraction regex de l'`href` (lecture href, pas le texte SVG). La page releases Gitea peut changer de structure HTML : si le sélecteur / l'extraction grep ne cible plus la 1ʳᵉ release, le script échoue silencieusement (aucun lien trouvé). Surveiller ; adapter l'extraction si nécessaire (ex. cibler `details.download` open, ou un pattern plus large sur `releases/download/` tout en restant limité à la 1ʳᵉ release). Timeout `--connect-timeout 10 --max-time 120` sur les `curl` pour éviter un blocage.
 - **`00-init.sh`** : `mkdir -p www` (zone tampon obsolète) — à supprimer si plus utilisée.
 - **Gestion d'erreurs / idempotence :** les scripts ne gèrent pas les échecs ni la re-exécution.
 - **README.md** : très court, à enrichir (installation, contribution).
