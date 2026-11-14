@@ -19,6 +19,7 @@ sudo apt update
 - [FreeTube](https://freetubeapp.io/)
 - [Heroic Game Launcher](https://heroicgameslauncher.com/)
 - [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) 9,10 et 11 
+- [Godot](https://godotengine.org/fr/)
 - [Hydra Launcher](https://hydralauncher.gg/)
 - [Hyprshot](https://github.com/Gustash/Hyprshot)
 - [Lib Hidapi Hotplug](https://codeberg.org/OpenRGB/hidapi-hotplug) dépendance de OpenRGB
@@ -28,11 +29,9 @@ sudo apt update
 
 ## Contenu futur
 
-- GE Proton 10/11
 - Echoes of the forgotten deep
 - GameLauncher
-- GODOT
-- https://codeberg.org/OpenRGB/hidapi-hotplug/releases/tag/hidapi-hotplug-0.15.0
+- eclipse
 
 # Construction
 

@@ -41,6 +41,7 @@ download_github() {
 
 		# Filtre regex (ERE) : ne garde que les fichiers correspondants.
 		if [[ "$FILENAME" =~ $pattern ]]; then
+			DL_FILENAME=$FILENAME
 			if [ -f "$FILENAME" ]; then
 				echo "a jour $FILENAME"
 			else

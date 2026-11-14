@@ -25,9 +25,8 @@ mkdir ${project}-${version}
 cd ${project}-${version}
 
 mkdir -p usr/local/bin/
-cp ../hyprshot usr/local/bin/
-
 mkdir DEBIAN
+cp ../hyprshot usr/local/bin/
 
 echo "Source: ${project}
 Section: graphics
