@@ -33,6 +33,8 @@ sudo apt update
 - Echoes of the forgotten deep
 - GameLauncher
 - eclipse
+- Epic https://launcher.epicgames.com/
+- gog galaxy ? 
 
 # Construction
 

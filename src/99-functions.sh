@@ -37,7 +37,7 @@ download_github() {
 		if [ -z "${URL}" ]; then
 			continue
 		fi
-		FILENAME=$(basename "${URL}")
+	FILENAME=$(basename "${URL}")
 
 		# Filtre regex (ERE) : ne garde que les fichiers correspondants.
 		if [[ "$FILENAME" =~ $pattern ]]; then
@@ -228,5 +228,56 @@ download_github_last_tag() {
 		fi
 	done <<< "${URLS}"
 	LAST_GITHUB_TAG="${TAG_NAME}"
+	return 0
+}
+
+
+# download_eclipse : telecharge le dernier package Eclipse (IDE for Enterprise
+# Java and Web Developers par defaut) dans le dossier courant.
+#
+#   download_eclipse <package> <arch> <platform>
+#
+#   package   : id du package dans l'URL du download (ex: eclipse-jee). Unique
+#            par package.
+#   arch      : architecture cible (ex: x86_64 pour Linux).
+#   platform  : plateforme cible (ex: linux-gtk pour Linux, win32, macosx-cocoa).
+#
+# La page https://www.eclipse.org/downloads/packages/ est server-rendered :
+# chaque package = un <article class="package">. On isole l'article du package
+# par le prefix du slug dans son lien de telechargement (<package>-<version>-
+# <platform>-<arch>.tar.gz), puis on extrait le lien <arch> (.tar.gz) de la
+# plateforme cible. .tar.gz impose Linux : les liens Windows (.zip) / macOS
+# (.dmg) ne correspondent pas.
+# dependances : curl, grep, sed
+download_eclipse() {
+	local package="$1"
+	local arch="$2"
+	local platform="$3"
+
+	local PAGE_URL="https://www.eclipse.org/downloads/packages/"
+	local PAGE_HTML=$(curl -s --connect-timeout 10 --max-time 120 "${PAGE_URL}")
+	if [ $? -ne 0 ]; then echo "Erreur recuperation page Eclipse."; return 1; fi
+
+	# Isoler l'article du package : le lien de telechargement porte le prefix
+	# <package>- (ex: eclipse-jee-). On isole du premier lien de la plateforme
+	# cible (ex: ...-linux-gtk-<arch>.tar.gz) jusqu'au prochain
+	# <article class="package"> (bornes de l'article). Le .tar.gz impose Linux :
+	# les liens Windows (.zip) / macOS (.dmg) ne correspondent pas.
+	local LINK_LINE=$(echo "${PAGE_HTML}" | grep -n "${package}\-[^ ]*-${platform}\-[^ ]*\.tar\.gz" | cut -d: -f1 | head -1)
+	if [ -z "${LINK_LINE}" ]; then echo "Package '${package}' introuvable sur la page Eclipse."; return 1; fi
+	local ART_START=$(echo "${PAGE_HTML}" | grep -n '<article class="package' | cut -d: -f1 | awk -v h="${LINK_LINE}" '$1<=h {_l=$1} END {print _l}')
+	if [ -z "${ART_START}" ]; then echo "Impossible d'isoler l'article du package '${package}'."; return 1; fi
+	local NEXT_ART=$(echo "${PAGE_HTML}" | grep -n '<article class="package' | cut -d: -f1 | awk -v h="${ART_START}" '$1>h {print $1; exit}')
+	local RANGE
+	if [ -z "${NEXT_ART}" ]; then RANGE=$(echo "${PAGE_HTML}" | sed -n "${ART_START},\$p"); else RANGE=$(echo "${PAGE_HTML}" | sed -n "${ART_START},$((NEXT_ART-1))p"); fi
+
+	# Dans la section, extraire le href du lien <arch> (.tar.gz) de la plateforme cible.
+	# Pattern ERE strict : prefix <package>, arch <arch>, .tar.gz → évite les
+	# liens Windows (.zip) / macOS (.dmg/.tar.xz) ou autres architectures.
+	local URL=$(echo "${RANGE}" | grep -oE "href=\"https://www.eclipse.org/downloads/download\.php\?file=[^\"]*${package}[^:]*-${arch}\.tar\.gz\"" | head -1 | sed -E 's/href="//; s/"$//')
+	if [ -z "${URL}" ]; then echo "Aucun lien ${platform} ${arch} (.tar.gz) trouvé pour le package Eclipse '${package}'."; return 1; fi
+
+	FILENAME=$(basename "${URL}")
+	if [ -f "${FILENAME}" ]; then echo "a jour ${FILENAME}"; else echo "Telechargement de ${FILENAME}"; curl -L --connect-timeout 10 --max-time 120 -o "${FILENAME}" "${URL}&r=1"; fi
 	return 0
 }

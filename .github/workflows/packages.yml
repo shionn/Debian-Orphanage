@@ -3,6 +3,9 @@ name: Orphanage — build + publish paquets
 on:
   push:
     branches: [main, master]
+  schedule:
+    - cron: '0 0 * * *'   # minuit
+    - cron: '0 12 * * *'  # midi
 
 jobs:
   build:
