@@ -278,6 +278,6 @@ download_eclipse() {
 	if [ -z "${URL}" ]; then echo "Aucun lien ${platform} ${arch} (.tar.gz) trouvé pour le package Eclipse '${package}'."; return 1; fi
 
 	FILENAME=$(basename "${URL}")
-	if [ -f "${FILENAME}" ]; then echo "a jour ${FILENAME}"; else echo "Telechargement de ${FILENAME}"; curl -L --connect-timeout 10 --max-time 120 -o "${FILENAME}" "${URL}&r=1"; fi
+	if [ -f "${FILENAME}" ]; then echo "a jour ${FILENAME}"; else echo "Telechargement de ${FILENAME}"; curl -L -o "${FILENAME}" "${URL}&r=1"; fi
 	return 0
 }
