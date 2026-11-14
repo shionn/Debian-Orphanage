@@ -24,9 +24,38 @@ sudo apt update
 - [Recomp Launcher](https://recomplauncher.com/)
 - [umu](https://github.com/Open-Wine-Components/umu-launcher)
 
+## Contenu futur 
+
+- GE Proton 9/10/11
+- Echoes of the forgotten deep
+- GameLauncher
 
 
 # Construction
+
+## Generation d'une clef gpg
+
+TODO expliquer comment generer.
+
+## Sur votre propre serveur
+
+Executer une premiere fois `src/00-init`
+
+Editer le fichier `update.sh` en changeant `host` et `dest`: 
+
+~~~
+host=orphanage.shionn.org
+dest=/var/www/html
+~~~
+
+Executer `update.sh`
+
+## sur github
+
+Forker ou copier ce projet à votre guise. Importer dans les sercrets de voter projet sur github votre clef gpg. 
+TODO expliquer comment faire.
+
+Modifier le fichier package.yaml en modifiant l'url de deploiement.
 
 WIP
 

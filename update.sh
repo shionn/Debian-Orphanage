@@ -6,7 +6,10 @@ set -e
 
 git pull
 
-bash "src/01-keyring.sh" "http://orphanage.shionn.org"
+host=orphanage.shionn.org
+dest=/var/www/html
+
+bash "src/01-keyring.sh" "http://${host}"
 
 src_dir="src"
 for script in "$src_dir"/*.sh; do
@@ -22,4 +25,4 @@ for script in "$src_dir"/*.sh; do
 done
 
 echo "== publication =="
-bash "src/90-update-repo.sh" "orphanage.shionn.org" "/var/www/html"
+bash "src/90-update-repo.sh" $host $dest
