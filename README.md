@@ -35,31 +35,32 @@ sudo apt update
 
 ## Sur votre propre serveur
 
-Executer une premiere fois `src/00-init`. Cela installera les dependance necessaire du projet et générera la clef de siganture nécéssaire. La clef doit etre **sans mot de passe** pour que les script s'éxécute tous seul.
+Exécuter une première fois `src/00-init`. 
+Cela installera les dépendances nécessaires du projet et générera la clef de signature nécessaire. 
+La clef doit être **sans mot de passe** pour que les scripts s'exécutent tous seuls.
 
-Editer le fichier `update.sh` en changeant `host` et `dest`:
+Éditer le fichier `update.sh` en changeant `host` et `dest`:
 
 ~~~
 host=orphanage.shionn.org
 dest=/var/www/html
 ~~~
 
-Executer `update.sh`
+Exécuter `update.sh`
 
 ## sur github
 
-Forker ou copier ce projet à votre guise.
-Sur votre ordinateur généré votre propre clef de signature avec `gpg --generate-key`.
-La clef doit etre **sans mot de passe** pour que les script s'éxécute tous seul.
- 
+Faire un fork ou copier ce projet à votre guise.
+Sur votre ordinateur, générez votre propre clef de signature avec `gpg --generate-key`.
+La clef doit être **sans mot de passe** pour que les scripts s'exécutent tous seuls.
 Puis importer votre clef GPG comme secret du repo GitHub `Debian-Orphanage` :
 
-    gpg --export-secret-keys | base64 -w0
+    gpg --export-secret-keys --armor TA_CLE@exemple.com | base64 -w0
 
     Settings → Secrets and variables → Secrets → New repository secret
     Nom : GPG_PRIVATE_KEY
-    Valeur : le resultat de la commande ci-dessus
+    Valeur : le résultat de la commande ci-dessus
 
 Le workflow GitHub la lit via `${{ secrets.GPG_PRIVATE_KEY }}` pour signer les paquets.
 
-Modifier l'URL de deploiement dans `.github/workflows/packages.yml` (serveur GitHub).
+Modifier l'URL de déploiement dans `.github/workflows/packages.yml` (serveur GitHub).
