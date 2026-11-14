@@ -1,12 +1,11 @@
 #!/bin/bash
 
-#source "src/99-functions.sh"
-
-rm -Rf build/trixie/recomp-launcher/
-mkdir -p build/trixie/recomp-launcher/
-cd build/trixie/recomp-launcher/
-
 project="recomp-launcher"
+
+rm -Rf build/trixie/${project}/
+mkdir -p build/trixie/${project}/
+cd build/trixie/${project}/
+
 
 curl -LJO "https://recomplauncher.com/api/launcher-beta.php?a=download&os=deb"
 #   RecompLauncher_0.90.0-beta.41_amd64.deb  ->  version=0.90.0, revision=beta.41

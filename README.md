@@ -16,10 +16,11 @@ sudo apt update
 - [BC250 Control Center](https://github.com/movacx/bc250-control-center)
 - [Discord](https://discord.com/)
 - [Faugus Launcher](https://github.com/Faugus/faugus-launcher)
+- [Fluxer](https://fluxer.com/)
 - [FreeTube](https://freetubeapp.io/)
 - [Heroic Game Launcher](https://heroicgameslauncher.com/)
-- [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) 9,10 et 11 
-- [Godot](https://godotengine.org/fr/)
+- [GE-Proton 9/10/11](https://github.com/GloriousEggroll/proton-ge-custom)
+- [Godot4](https://godotengine.org/fr/)
 - [Hydra Launcher](https://hydralauncher.gg/)
 - [Hyprshot](https://github.com/Gustash/Hyprshot)
 - [Lib Hidapi Hotplug](https://codeberg.org/OpenRGB/hidapi-hotplug) dépendance de OpenRGB
@@ -32,6 +33,7 @@ sudo apt update
 - Echoes of the forgotten deep
 - GameLauncher
 - eclipse
+- fluxer
 
 # Construction
 
