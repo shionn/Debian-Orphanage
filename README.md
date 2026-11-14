@@ -33,7 +33,6 @@ sudo apt update
 - Echoes of the forgotten deep
 - GameLauncher
 - eclipse
-- fluxer
 
 # Construction
 
