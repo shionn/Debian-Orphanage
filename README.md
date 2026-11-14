@@ -1,7 +1,7 @@
 
 # Repository debian pour package orphelin
 
-L'idée c'est de faire un repository qui contient tous les paquets debian (que je trouve utile) qui n'ont pas de repo officiel en un seul repo. 
+L'idée c'est de faire un repository qui contient tous les paquets debian (que je trouve utile) qui n'ont pas de repo officiel en un seul repo.
 
 ## Installation
 
@@ -24,24 +24,20 @@ sudo apt update
 - [Recomp Launcher](https://recomplauncher.com/)
 - [umu](https://github.com/Open-Wine-Components/umu-launcher)
 
-## Contenu futur 
+## Contenu futur
 
 - GE Proton 9/10/11
 - Echoes of the forgotten deep
 - GameLauncher
-
+- GODOT
 
 # Construction
 
-## Generation d'une clef gpg
-
-TODO expliquer comment generer.
-
 ## Sur votre propre serveur
 
-Executer une premiere fois `src/00-init`
+Executer une premiere fois `src/00-init`. Cela installera les dependance necessaire du projet et générera la clef de siganture nécéssaire. La clef doit etre **sans mot de passe** pour que les script s'éxécute tous seul.
 
-Editer le fichier `update.sh` en changeant `host` et `dest`: 
+Editer le fichier `update.sh` en changeant `host` et `dest`:
 
 ~~~
 host=orphanage.shionn.org
@@ -52,11 +48,18 @@ Executer `update.sh`
 
 ## sur github
 
-Forker ou copier ce projet à votre guise. Importer dans les sercrets de voter projet sur github votre clef gpg. 
-TODO expliquer comment faire.
+Forker ou copier ce projet à votre guise.
+Sur votre ordinateur généré votre propre clef de signature avec `gpg --generate-key`.
+La clef doit etre **sans mot de passe** pour que les script s'éxécute tous seul.
+ 
+Puis importer votre clef GPG comme secret du repo GitHub `Debian-Orphanage` :
 
-Modifier le fichier package.yaml en modifiant l'url de deploiement.
+    gpg --export-secret-keys | base64 -w0
 
-WIP
+    Settings → Secrets and variables → Secrets → New repository secret
+    Nom : GPG_PRIVATE_KEY
+    Valeur : le resultat de la commande ci-dessus
 
-Pour reconstruire votre repo vous devez executer les scripts present dans src un par un mais certain script necessiterons d'etre adapter à vos target. 
+Le workflow GitHub la lit via `${{ secrets.GPG_PRIVATE_KEY }}` pour signer les paquets.
+
+Modifier l'URL de deploiement dans `.github/workflows/packages.yml` (serveur GitHub).
