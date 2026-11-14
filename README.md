@@ -21,6 +21,7 @@ sudo apt update
 - [GE-Proton9](https://github.com/GloriousEggroll/proton-ge-custom)
 - [Hydra Launcher](https://hydralauncher.gg/)
 - [Hyprshot](https://github.com/Gustash/Hyprshot)
+- [Lib Hidapi Hotplug](https://codeberg.org/OpenRGB/hidapi-hotplug) dépendance de OpenRGB
 - [OpenRGB](https://openrgb.org/)
 - [Recomp Launcher](https://recomplauncher.com/)
 - [umu](https://github.com/Open-Wine-Components/umu-launcher)
