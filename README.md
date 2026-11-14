@@ -18,7 +18,7 @@ sudo apt update
 - [Faugus Launcher](https://github.com/Faugus/faugus-launcher)
 - [FreeTube](https://freetubeapp.io/)
 - [Heroic Game Launcher](https://heroicgameslauncher.com/)
-- [GE-Proton9](https://github.com/GloriousEggroll/proton-ge-custom)
+- [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) 9,10 et 11 
 - [Hydra Launcher](https://hydralauncher.gg/)
 - [Hyprshot](https://github.com/Gustash/Hyprshot)
 - [Lib Hidapi Hotplug](https://codeberg.org/OpenRGB/hidapi-hotplug) dépendance de OpenRGB
@@ -35,6 +35,8 @@ sudo apt update
 - https://codeberg.org/OpenRGB/hidapi-hotplug/releases/tag/hidapi-hotplug-0.15.0
 
 # Construction
+
+Si vous voulez construire votre propre serveur.
 
 ## Sur votre propre serveur
 
