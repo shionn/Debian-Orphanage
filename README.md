@@ -18,6 +18,7 @@ sudo apt update
 - [Faugus Launcher](https://github.com/Faugus/faugus-launcher)
 - [FreeTube](https://freetubeapp.io/)
 - [Heroic Game Launcher](https://heroicgameslauncher.com/)
+- [GE-Proton9](https://github.com/GloriousEggroll/proton-ge-custom)
 - [Hydra Launcher](https://hydralauncher.gg/)
 - [Hyprshot](https://github.com/Gustash/Hyprshot)
 - [OpenRGB](https://openrgb.org/)
@@ -26,10 +27,11 @@ sudo apt update
 
 ## Contenu futur
 
-- GE Proton 9/10/11
+- GE Proton 10/11
 - Echoes of the forgotten deep
 - GameLauncher
 - GODOT
+- https://codeberg.org/OpenRGB/hidapi-hotplug/releases/tag/hidapi-hotplug-0.15.0
 
 # Construction
 
