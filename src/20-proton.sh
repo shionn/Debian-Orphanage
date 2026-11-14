@@ -2,7 +2,7 @@
 
 source "src/99-functions.sh"
 
-project="ge-proton-9"
+project="ge-proton9"
 revision=0
 
 mkdir -p build/trixie/${project}/
@@ -15,29 +15,23 @@ if [ -z "${LAST_GITHUB_TAG}" ]; then
 	exit 1
 fi
 
-version=$(echo "${LAST_GITHUB_TAG}" | sed -E 's/.*-(.+)-(.+)$/\1.\2/')
+version=$(echo "${LAST_GITHUB_TAG}" | sed -E 's/.*-([0-9]+)$/\1/')
+#version=$(echo "GE-Proton9-27" | sed -E 's/.*-([0-9]+)$/\1/')
 
 if [ -f "$project-$version.deb" ]; then
-	echo "a jour $version"
-	# deja la = OK, pas d'erreur
+	echo "Proton GE à jour $version"
 	exit 0
 fi
 
-mkdir ${version}
-tar -xzf GE-Proton9-${version}.tar.gz -C ${version}
-cd ${version}
-
-mkdir ${project}-${version}
+mkdir -p ${project}-${version}
+tar -xzf GE-Proton9-${version}.tar.gz 
 cd ${project}-${version}
 
-exit 0
-
-# a mettre dans /lib/proton/proton-x/
+# préparation du package
 # faire les liens symbolique dans /usr/bin ? a voir car plusieur version de proton
 
-
-mkdir -p usr/local/bin/
-cp ../hyprshot usr/local/bin/
+mkdir -p lib/proton/GE-Proton-9/
+mv ../GE-Proton9-${version}/* lib/proton/GE-Proton-9/
 
 mkdir DEBIAN
 
@@ -62,6 +56,4 @@ Licence: https://github.com/GloriousEggroll/proton-ge-custom/blob/master/LICENSE
 cd .. 
 dpkg -b ${project}-${version}
 
-mv ${project}-${version}.deb ../
-cd ../
-rm -Rf $version
+rm -Rf GE-Proton9-${version} ${project}-${version}
