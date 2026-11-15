@@ -28,7 +28,7 @@ SignWith: yes
 " > "${CONFIG_ROOT}/conf/distributions"
 
 reprepro -b "${CONFIG_ROOT}" includedeb trixie       build/trixie/*/*.deb
-reprepro -b "${CONFIG_ROOT}" includedeb experimental build/experimental/*/*.deb
+#reprepro -b "${CONFIG_ROOT}" includedeb experimental build/experimental/*/*.deb
 
 reprepro -b "${CONFIG_ROOT}" export trixie
-reprepro -b "${CONFIG_ROOT}" export experimental
+#reprepro -b "${CONFIG_ROOT}" export experimental
