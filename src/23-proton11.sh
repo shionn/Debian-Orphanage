@@ -8,7 +8,7 @@ version=11
 mkdir -p build/trixie/${project}/
 cd build/trixie/${project}/
 
-download_github_last_tag GloriousEggroll proton-ge-custom '.*\.tar\.gz' "GE-Proton${version}-.*"
+download_github_last_tag GloriousEggroll proton-ge-custom '.*x86_64\.tar\.gz' "GE-Proton${version}-.*"
 
 if [ -z "${LAST_GITHUB_TAG}" ]; then
 	echo "Aucune release correspondant au pattern de tag."
