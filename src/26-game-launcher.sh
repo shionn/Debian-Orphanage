@@ -56,7 +56,7 @@ Homepage: https://github.com/shionn/GameLauncher
 Package: ${project}
 Version: ${version}
 Architecture: amd64
-Depends: openjdk-21-jre, umu-launcher, ge-proton10, zenity, gamescope, gamemode
+Depends: openjdk-21-jre, umu-launcher, ge-proton10, zenity, gamescope, gamemode, mangoapp, mangohud
 Description: Offline simple game launcher.">> DEBIAN/control
 
 echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
