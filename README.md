@@ -15,10 +15,12 @@ sudo apt update
 
 - [BC250 Control Center](https://github.com/movacx/bc250-control-center)
 - [Discord](https://discord.com/)
+- [Epic Game Launcher](https://launcher.epicgames.com/)
 - [Faugus Launcher](https://github.com/Faugus/faugus-launcher)
 - [Fluxer](https://fluxer.com/)
 - [FreeTube](https://freetubeapp.io/)
 - [Heroic Game Launcher](https://heroicgameslauncher.com/)
+- [GameLauncher](https://github.com/shionn/GameLauncher)
 - [GE-Proton 9/10/11](https://github.com/GloriousEggroll/proton-ge-custom)
 - [Godot4](https://godotengine.org/fr/)
 - [Hydra Launcher](https://hydralauncher.gg/)
@@ -31,8 +33,7 @@ sudo apt update
 ## Contenu futur
 
 - Echoes of the forgotten deep
-- GameLauncher
-- Epic https://launcher.epicgames.com/
+- Epic https://launcher.epicgames.com/ ? https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncher-x86_64.deb
 - gog galaxy ? 
 
 # Construction
